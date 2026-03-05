@@ -13,6 +13,7 @@
 - [x] CSV export (`timecard export`) for frictionless data portability
 - [ ] Command autocomplete installed automatically during install (`install.sh` / `install.ps1`)
 - [ ] Interactive setup wizard — prompt for contractor/client info during install to generate `.env`
+- [ ] Update script that clears the uv cache before reinstalling to guarantee new changes are picked up (`timecard update` or a shell script)
 
 ## v2.0 — Multi-Client Support
 - [ ] Multiple clients with per-client rates
