@@ -217,41 +217,17 @@ def export(
     period: Optional[str] = typer.Option(None, help="Filter period: week, biweekly, or month"),
 ) -> None:
     """Export time entries to CSV."""
-    import csv
-    import io
+    from timecard.export import export_entries_csv
 
     conn = _get_conn()
-
-    start_date = None
-    end_date = None
-    if period:
-        from timecard.invoice import _get_period_dates
-
-        start_date, end_date = _get_period_dates(period)
-
-    entries = get_entries(conn, start_date=start_date, end_date=end_date)
+    csv_text = export_entries_csv(conn, period=period)
 
     if output:
-        f = open(output, "w", newline="")
+        with open(output, "w", newline="") as f:
+            f.write(csv_text)
+        typer.echo(f"Exported entries to {output}")
     else:
-        f = io.StringIO()
-
-    writer = csv.writer(f)
-    writer.writerow(["ID", "Date", "Hours", "Note", "Invoiced"])
-    for e in entries:
-        writer.writerow([
-            e.id,
-            e.started_at[:10] if e.started_at else "",
-            e.hours(),
-            e.note or "",
-            "Yes" if e.invoiced else "No",
-        ])
-
-    if output:
-        f.close()
-        typer.echo(f"Exported {len(entries)} entries to {output}")
-    else:
-        typer.echo(f.getvalue(), nl=False)
+        typer.echo(csv_text, nl=False)
 
 
 @app.command()

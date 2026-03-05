@@ -162,7 +162,7 @@ class TestExport:
         out_file = str(tmp_path / "export.csv")
         result = runner.invoke(app, ["export", "--output", out_file])
         assert result.exit_code == 0
-        assert "Exported 1 entries" in result.stdout
+        assert "Exported entries to" in result.stdout
         content = open(out_file).read()
         assert "2025-01-15" in content
 
