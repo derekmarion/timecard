@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* Invoice template styles */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    color: #333;
+    padding: 40px;
+    line-height: 1.5;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    border-bottom: 3px solid #2c3e50;
+    padding-bottom: 20px;
+  }
+  .header h1 {
+    font-size: 28px;
+    color: #2c3e50;
+    letter-spacing: 2px;
+  }
+  .invoice-meta {
+    text-align: right;
+  }
+  .invoice-meta p {
+    margin-bottom: 4px;
+  }
+  .parties {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+  }
+  .party {
+    width: 45%;
+  }
+  .party h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #7f8c8d;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+  .party p {
+    margin-bottom: 2px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+  }
+  thead th {
+    background: #2c3e50;
+    color: white;
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  thead th:last-child {
+    text-align: right;
+  }
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #ecf0f1;
+  }
+  tbody td:last-child {
+    text-align: right;
+  }
+  tbody tr:nth-child(even) {
+    background: #f9f9f9;
+  }
+  .totals {
+    width: 300px;
+    margin-left: auto;
+    margin-bottom: 40px;
+  }
+  .totals table {
+    margin-bottom: 0;
+  }
+  .totals td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #ecf0f1;
+  }
+  .totals tr:last-child td {
+    font-weight: bold;
+    font-size: 14px;
+    border-bottom: 3px solid #2c3e50;
+    padding-top: 12px;
+  }
+  .totals td:last-child {
+    text-align: right;
+  }
+  .payment-instructions {
+    background: #f8f9fa;
+    padding: 16px 20px;
+    border-left: 4px solid #2c3e50;
+    margin-top: 20px;
+  }
+  .payment-instructions h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #7f8c8d;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+  .note {
+    margin-bottom: 20px;
+    font-style: italic;
+    color: #555;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>INVOICE</h1>
+    <div class="invoice-meta">
+      <p><strong>{{ invoice_number }}</strong></p>
+      <p>Date: {{ created_date }}</p>
+      <p>Period: {{ period_start }} — {{ period_end }}</p>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div class="party">
+      <h3>From</h3>
+      <p><strong>{{ contractor_name }}</strong></p>
+      <p>{{ contractor_address }}</p>
+      <p>{{ contractor_email }}</p>
+    </div>
+    <div class="party">
+      <h3>Bill To</h3>
+      <p><strong>{{ client_name }}</strong></p>
+      <p>{{ client_address }}</p>
+    </div>
+  </div>
+
+  {% if note %}
+  <p class="note">{{ note }}</p>
+  {% endif %}
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Description</th>
+        <th>Hours</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in line_items %}
+      <tr>
+        <td>{{ item.date }}</td>
+        <td>{{ item.note or "—" }}</td>
+        <td>{{ item.hours }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <table>
+      <tr>
+        <td>Total Hours</td>
+        <td>{{ total_hours }}</td>
+      </tr>
+      <tr>
+        <td>Hourly Rate</td>
+        <td>${{ "%.2f" | format(hourly_rate) }}</td>
+      </tr>
+      <tr>
+        <td>Amount Due</td>
+        <td>${{ "%.2f" | format(total_amount) }}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="payment-instructions">
+    <h3>Payment Instructions</h3>
+    <p>{{ payment_instructions }}</p>
+  </div>
+</body>
+</html>
