@@ -10,7 +10,8 @@
 - Cross-platform install scripts
 
 ## v1.1 — Quality of Life
-- [ ] CSV export (`timecard export --format csv`) for frictionless data portability
+- [x] CSV export (`timecard export`) for frictionless data portability
+- [ ] Command autocomplete installed automatically during install (`install.sh` / `install.ps1`)
 - [ ] Interactive setup wizard — prompt for contractor/client info during install to generate `.env`
 
 ## v2.0 — Multi-Client Support

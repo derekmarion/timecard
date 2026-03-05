@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.0] - 2026-03-04
+
+### Added
+- CSV export: `timecard export` writes entries to stdout or a file (`--output`); supports `--period` filtering
+- `export_csv` MCP tool for agent-driven CSV export
+
 ## [1.0.0] - 2026-03-04
 
 ### Added
