@@ -15,6 +15,10 @@
 - [ ] Interactive setup wizard — prompt for contractor/client info during install to generate `.env`
 - [ ] Update script that clears the uv cache before reinstalling to guarantee new changes are picked up (`timecard update` or a shell script)
 
+## v1.2 — Invoice Number Control
+- [ ] Configurable invoice number start offset via `INVOICE_NUMBER_START` in `.env` — for users migrating from a prior invoicing system
+- [ ] `--number` flag on `timecard invoice` to override the auto-incremented number for a single invocation
+
 ## v2.0 — Multi-Client Support
 - [ ] Multiple clients with per-client rates
 - [ ] Client management commands (`timecard client add/list/edit`)
