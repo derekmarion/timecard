@@ -76,7 +76,7 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
     if env_path:
         load_dotenv(env_path)
     else:
-        load_dotenv()
+        load_dotenv(Path.cwd() / ".env")
 
     return Settings(
         hourly_rate=float(os.environ.get("HOURLY_RATE", "150")),
