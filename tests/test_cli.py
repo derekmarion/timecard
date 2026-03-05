@@ -147,6 +147,31 @@ class TestDelete:
         assert "cancelled" in result.stdout
 
 
+class TestExport:
+    def test_export_stdout(self, tmp_db):
+        runner.invoke(app, ["add", "--date", "2025-01-15", "--hours", "3.5", "--note", "Work"])
+        result = runner.invoke(app, ["export"])
+        assert result.exit_code == 0
+        assert "ID,Date,Hours,Note,Invoiced" in result.stdout
+        assert "2025-01-15" in result.stdout
+        assert "3.5" in result.stdout
+        assert "Work" in result.stdout
+
+    def test_export_to_file(self, tmp_db, tmp_path):
+        runner.invoke(app, ["add", "--date", "2025-01-15", "--hours", "2", "--note", "Coding"])
+        out_file = str(tmp_path / "export.csv")
+        result = runner.invoke(app, ["export", "--output", out_file])
+        assert result.exit_code == 0
+        assert "Exported entries to" in result.stdout
+        content = open(out_file).read()
+        assert "2025-01-15" in content
+
+    def test_export_empty(self, tmp_db):
+        result = runner.invoke(app, ["export"])
+        assert result.exit_code == 0
+        assert "ID,Date,Hours,Note,Invoiced" in result.stdout
+
+
 class TestInvoice:
     @patch("timecard.invoice._write_pdf")
     def test_generate_invoice(self, mock_pdf, tmp_db):

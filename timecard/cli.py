@@ -212,6 +212,25 @@ def delete(
 
 
 @app.command()
+def export(
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path (default: stdout)"),
+    period: Optional[str] = typer.Option(None, help="Filter period: week, biweekly, or month"),
+) -> None:
+    """Export time entries to CSV."""
+    from timecard.export import export_entries_csv
+
+    conn = _get_conn()
+    csv_text = export_entries_csv(conn, period=period)
+
+    if output:
+        with open(output, "w", newline="") as f:
+            f.write(csv_text)
+        typer.echo(f"Exported entries to {output}")
+    else:
+        typer.echo(csv_text, nl=False)
+
+
+@app.command()
 def invoice(
     period: Optional[str] = typer.Option(
         None, help="Billing period: week, biweekly, or month"

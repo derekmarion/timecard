@@ -165,6 +165,22 @@ def delete_entry_tool(id: int) -> dict:
 
 
 @mcp.tool()
+def export_csv(period: Optional[str] = None) -> str:
+    """Export time entries as CSV text.
+
+    Args:
+        period: Optional filter — 'week', 'biweekly', or 'month'.
+
+    Returns:
+        CSV string with header row and one row per entry.
+    """
+    from timecard.export import export_entries_csv
+
+    conn = _get_conn()
+    return export_entries_csv(conn, period=period)
+
+
+@mcp.tool()
 def generate_invoice(
     period: Optional[str] = None, note: Optional[str] = None
 ) -> dict:

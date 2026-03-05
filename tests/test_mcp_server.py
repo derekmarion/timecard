@@ -117,6 +117,26 @@ class TestDeleteEntry:
         assert "error" in result
 
 
+class TestExportCsv:
+    def test_returns_csv_string(self, mock_conn):
+        from timecard.mcp_server import add_entry_tool, export_csv
+
+        add_entry_tool(date="2025-01-15", hours=2.0, note="Test work")
+        result = export_csv()
+        assert "ID,Date,Hours,Note,Invoiced" in result
+        assert "2025-01-15" in result
+        assert "2.0" in result
+        assert "Test work" in result
+
+    def test_empty_db(self, mock_conn):
+        from timecard.mcp_server import export_csv
+
+        result = export_csv()
+        assert "ID,Date,Hours,Note,Invoiced" in result
+        lines = result.strip().split("\n")
+        assert len(lines) == 1  # header only
+
+
 class TestGenerateInvoice:
     @patch("timecard.invoice._write_pdf")
     def test_returns_expected_structure(self, mock_pdf, mock_conn):
