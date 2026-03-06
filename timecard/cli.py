@@ -8,7 +8,7 @@ from typing import Optional
 
 import typer
 
-from timecard.config import DEFAULT_CONFIG_PATH, load_settings
+from timecard.config import DEFAULT_CONFIG_PATH, Settings, load_settings
 from timecard.db import (
     add_entry,
     delete_entry,
@@ -305,26 +305,29 @@ def setup() -> None:
     """Interactive setup wizard — create or update ~/.config/timecard/.env."""
     config_path = DEFAULT_CONFIG_PATH.expanduser()
 
+    existing: Settings | None = None
     if config_path.exists():
         typer.echo(f"Config file already exists at {config_path}")
-        if not typer.confirm("Overwrite it?", default=False):
+        if not typer.confirm("Edit it?", default=True):
             typer.echo("Setup cancelled.")
             raise typer.Exit(code=0)
+        existing = load_settings(str(config_path))
 
     typer.echo("TimeCard Setup Wizard")
     typer.echo("=" * 40)
     typer.echo("Press Enter to accept defaults shown in [brackets].\n")
 
-    contractor_name = typer.prompt("Your name", default="")
-    contractor_address = typer.prompt("Your address", default="")
-    contractor_email = typer.prompt("Your email", default="")
-    client_name = typer.prompt("Client name", default="")
-    client_address = typer.prompt("Client address", default="")
-    hourly_rate = typer.prompt("Hourly rate (USD)", default="150")
-    invoice_output_dir = typer.prompt("Invoice output directory", default="~/invoices")
+    defaults = existing or Settings()
+    contractor_name = typer.prompt("Your name", default=defaults.contractor_name)
+    contractor_address = typer.prompt("Your address", default=defaults.contractor_address)
+    contractor_email = typer.prompt("Your email", default=defaults.contractor_email)
+    client_name = typer.prompt("Client name", default=defaults.client_name)
+    client_address = typer.prompt("Client address", default=defaults.client_address)
+    hourly_rate = typer.prompt("Hourly rate (USD)", default=str(defaults.hourly_rate))
+    invoice_output_dir = typer.prompt("Invoice output directory", default=defaults.invoice_output_dir)
     payment_instructions = typer.prompt(
         "Payment instructions",
-        default="Please remit payment within 30 days.",
+        default=defaults.payment_instructions,
     )
 
     lines = [

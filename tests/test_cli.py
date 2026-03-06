@@ -238,17 +238,32 @@ class TestSetup:
         assert "cancelled" in result.stdout.lower()
         assert config_path.read_text() == "HOURLY_RATE=100\n"
 
-    def test_setup_overwrites_if_confirmed(self, tmp_path, monkeypatch):
+    def test_setup_edit_preserves_existing_values(self, tmp_path, monkeypatch):
         config_path = tmp_path / ".env"
-        config_path.write_text("HOURLY_RATE=100\n")
+        config_path.write_text(
+            'CONTRACTOR_NAME="Jane Smith"\nHOURLY_RATE=100\n'
+            'CLIENT_NAME="Acme"\nCONTRACTOR_ADDRESS=""\n'
+            'CONTRACTOR_EMAIL=""\nCLIENT_ADDRESS=""\n'
+            'INVOICE_OUTPUT_DIR=~/invoices\n'
+            'PAYMENT_INSTRUCTIONS="Pay me."\n'
+        )
         monkeypatch.setattr("timecard.cli.DEFAULT_CONFIG_PATH", config_path)
 
+        # Accept all defaults by pressing Enter, except hourly rate
         inputs = "\n".join([
-            "y",  # overwrite confirmation
-            "New Name", "", "", "", "", "200", "~/invoices", "Pay me.",
+            "y",   # confirm edit
+            "",    # contractor name (keep "Jane Smith")
+            "",    # contractor address
+            "",    # contractor email
+            "",    # client name (keep "Acme")
+            "",    # client address
+            "200", # update hourly rate
+            "",    # invoice output dir
+            "",    # payment instructions
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
         content = config_path.read_text()
-        assert 'CONTRACTOR_NAME="New Name"' in content
+        assert 'CONTRACTOR_NAME="Jane Smith"' in content
+        assert 'CLIENT_NAME="Acme"' in content
         assert "HOURLY_RATE=200" in content
