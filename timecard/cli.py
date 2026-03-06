@@ -25,7 +25,11 @@ app = typer.Typer(help="TimeCard — time tracking and invoicing for 1099 contra
 def _get_conn():
     """Get a database connection using current settings."""
     settings = load_settings()
-    return get_connection(settings.get_db_path())
+    try:
+        return get_connection(settings.get_db_path())
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=2)
 
 
 def _output(data: dict, as_json: bool) -> None:

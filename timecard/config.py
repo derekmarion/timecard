@@ -45,8 +45,16 @@ class Settings:
 
         Returns:
             Absolute Path to the SQLite database file.
+
+        Raises:
+            ValueError: If the resolved path is an existing directory.
         """
         path = Path(self.db_path).expanduser()
+        if path.is_dir():
+            raise ValueError(
+                f"TIMECARD_DB_PATH resolves to a directory, not a file: {path}\n"
+                "Set it to a file path, e.g. ~/.local/share/timecard/timecard.db"
+            )
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 

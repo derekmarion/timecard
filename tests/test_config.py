@@ -18,6 +18,12 @@ class TestSettings:
         assert db_path == tmp_path / "data" / "test.db"
         assert db_path.parent.exists()
 
+    def test_get_db_path_raises_if_directory(self, tmp_path):
+        s = Settings(db_path=str(tmp_path))
+        import pytest
+        with pytest.raises(ValueError, match="resolves to a directory"):
+            s.get_db_path()
+
     def test_get_invoice_output_dir(self, tmp_path):
         s = Settings(invoice_output_dir=str(tmp_path / "invoices"))
         out = s.get_invoice_output_dir()
