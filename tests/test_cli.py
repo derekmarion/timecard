@@ -202,3 +202,53 @@ class TestAuth:
     def test_auth_no_secrets_errors(self, mock_auth, tmp_db):
         result = runner.invoke(app, ["auth", "--json"])
         assert result.exit_code == 2
+
+
+class TestSetup:
+    def test_setup_creates_config(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".config" / "timecard" / ".env"
+        monkeypatch.setattr("timecard.config.DEFAULT_CONFIG_PATH", config_path)
+        monkeypatch.setattr("timecard.cli.DEFAULT_CONFIG_PATH", config_path)
+
+        inputs = "\n".join([
+            "Jane Smith",
+            "456 Elm St",
+            "jane@example.com",
+            "Acme Corp",
+            "123 Main St",
+            "150",
+            "~/invoices",
+            "Please pay within 30 days.",
+        ])
+        result = runner.invoke(app, ["setup"], input=inputs + "\n")
+        assert result.exit_code == 0
+        assert config_path.exists()
+        content = config_path.read_text()
+        assert 'CONTRACTOR_NAME="Jane Smith"' in content
+        assert 'CLIENT_NAME="Acme Corp"' in content
+        assert "HOURLY_RATE=150" in content
+
+    def test_setup_aborts_if_exists_and_no_overwrite(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".env"
+        config_path.write_text("HOURLY_RATE=100\n")
+        monkeypatch.setattr("timecard.cli.DEFAULT_CONFIG_PATH", config_path)
+
+        result = runner.invoke(app, ["setup"], input="n\n")
+        assert result.exit_code == 0
+        assert "cancelled" in result.stdout.lower()
+        assert config_path.read_text() == "HOURLY_RATE=100\n"
+
+    def test_setup_overwrites_if_confirmed(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".env"
+        config_path.write_text("HOURLY_RATE=100\n")
+        monkeypatch.setattr("timecard.cli.DEFAULT_CONFIG_PATH", config_path)
+
+        inputs = "\n".join([
+            "y",  # overwrite confirmation
+            "New Name", "", "", "", "", "200", "~/invoices", "Pay me.",
+        ])
+        result = runner.invoke(app, ["setup"], input=inputs + "\n")
+        assert result.exit_code == 0
+        content = config_path.read_text()
+        assert 'CONTRACTOR_NAME="New Name"' in content
+        assert "HOURLY_RATE=200" in content

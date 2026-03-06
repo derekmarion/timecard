@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- `timecard setup` interactive wizard — prompts for contractor/client info and writes `~/.config/timecard/.env`
+- Config file now defaults to `~/.config/timecard/.env` (XDG Base Directory spec)
+- Database now defaults to `~/.local/share/timecard/timecard.db` (XDG Base Directory spec)
+
 ## [1.1.0] - 2026-03-04
 
 ### Added

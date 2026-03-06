@@ -34,7 +34,8 @@ TimeCard is a Python CLI for 1099 contractors. The package lives in `timecard/` 
 9. `__main__.py` — entrypoint
 
 **Key design decisions:**
-- DB path defaults to `~/.timecard/timecard.db`; overridable via `TIMECARD_DB_PATH` env var for test isolation
+- DB path defaults to `~/.local/share/timecard/timecard.db` (XDG data home); overridable via `TIMECARD_DB_PATH` env var for test isolation
+- Config `.env` defaults to `~/.config/timecard/.env` (XDG config home); overridable via `TIMECARD_CONFIG_PATH`
 - `active_session` table uses `CHECK (id = 1)` to enforce a single row
 - All CLI commands exit with code `0` (success), `1` (user error), or `2` (system/config error)
 - MCP server is a pure wrapper — all business logic stays in the non-MCP modules
@@ -58,6 +59,6 @@ CLIENT_ADDRESS="123 Main St, Springfield"
 INVOICE_OUTPUT_DIR=~/invoices
 PAYMENT_INSTRUCTIONS="Please remit payment via ACH or check within 30 days."
 GOOGLE_SHEET_ID=<optional>
-TIMECARD_DB_PATH=~/.timecard/timecard.db
+TIMECARD_DB_PATH=~/.local/share/timecard/timecard.db
 TIMECARD_CONFIG_PATH=<optional path to .env file>
 ```

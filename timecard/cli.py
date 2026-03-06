@@ -8,7 +8,7 @@ from typing import Optional
 
 import typer
 
-from timecard.config import load_settings
+from timecard.config import DEFAULT_CONFIG_PATH, load_settings
 from timecard.db import (
     add_entry,
     delete_entry,
@@ -298,6 +298,51 @@ def auth(
         raise typer.Exit(code=2)
 
     _output({"status": "authenticated"}, json_output)
+
+
+@app.command()
+def setup() -> None:
+    """Interactive setup wizard — create or update ~/.config/timecard/.env."""
+    config_path = DEFAULT_CONFIG_PATH.expanduser()
+
+    if config_path.exists():
+        typer.echo(f"Config file already exists at {config_path}")
+        if not typer.confirm("Overwrite it?", default=False):
+            typer.echo("Setup cancelled.")
+            raise typer.Exit(code=0)
+
+    typer.echo("TimeCard Setup Wizard")
+    typer.echo("=" * 40)
+    typer.echo("Press Enter to accept defaults shown in [brackets].\n")
+
+    contractor_name = typer.prompt("Your name", default="")
+    contractor_address = typer.prompt("Your address", default="")
+    contractor_email = typer.prompt("Your email", default="")
+    client_name = typer.prompt("Client name", default="")
+    client_address = typer.prompt("Client address", default="")
+    hourly_rate = typer.prompt("Hourly rate (USD)", default="150")
+    invoice_output_dir = typer.prompt("Invoice output directory", default="~/invoices")
+    payment_instructions = typer.prompt(
+        "Payment instructions",
+        default="Please remit payment within 30 days.",
+    )
+
+    lines = [
+        f'CONTRACTOR_NAME="{contractor_name}"',
+        f'CONTRACTOR_ADDRESS="{contractor_address}"',
+        f'CONTRACTOR_EMAIL="{contractor_email}"',
+        f'CLIENT_NAME="{client_name}"',
+        f'CLIENT_ADDRESS="{client_address}"',
+        f"HOURLY_RATE={hourly_rate}",
+        f"INVOICE_OUTPUT_DIR={invoice_output_dir}",
+        f'PAYMENT_INSTRUCTIONS="{payment_instructions}"',
+    ]
+
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text("\n".join(lines) + "\n")
+
+    typer.echo(f"\nConfig written to {config_path}")
+    typer.echo("Run 'timecard start' to begin tracking time.")
 
 
 @app.command()

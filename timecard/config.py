@@ -1,11 +1,15 @@
 """Configuration management for TimeCard — loads settings from .env files and environment variables."""
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
+
+# XDG Base Directory defaults
+DEFAULT_CONFIG_PATH = Path("~/.config/timecard/.env")
+DEFAULT_DB_PATH = Path("~/.local/share/timecard/timecard.db")
 
 
 @dataclass
@@ -34,7 +38,7 @@ class Settings:
     invoice_output_dir: str = "~/invoices"
     payment_instructions: str = "Please remit payment within 30 days."
     google_sheet_id: Optional[str] = None
-    db_path: str = "~/.timecard/timecard.db"
+    db_path: str = str(DEFAULT_DB_PATH)
 
     def get_db_path(self) -> Path:
         """Return the resolved database path, creating parent directories if needed.
@@ -76,7 +80,12 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
     if env_path:
         load_dotenv(env_path)
     else:
-        load_dotenv()
+        # Try XDG config location, then fall back to cwd .env
+        xdg_config = DEFAULT_CONFIG_PATH.expanduser()
+        if xdg_config.exists():
+            load_dotenv(xdg_config)
+        else:
+            load_dotenv()
 
     return Settings(
         hourly_rate=float(os.environ.get("HOURLY_RATE", "150")),
@@ -90,5 +99,5 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
             "PAYMENT_INSTRUCTIONS", "Please remit payment within 30 days."
         ),
         google_sheet_id=os.environ.get("GOOGLE_SHEET_ID") or None,
-        db_path=os.environ.get("TIMECARD_DB_PATH", "~/.timecard/timecard.db"),
+        db_path=os.environ.get("TIMECARD_DB_PATH", str(DEFAULT_DB_PATH)),
     )
