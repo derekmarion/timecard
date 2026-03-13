@@ -207,8 +207,7 @@ class TestAuth:
 class TestSetup:
     def test_setup_creates_config(self, tmp_path, monkeypatch):
         config_path = tmp_path / ".config" / "timecard" / ".env"
-        monkeypatch.setattr("timecard.config.DEFAULT_CONFIG_PATH", config_path)
-        monkeypatch.setattr("timecard.cli.DEFAULT_CONFIG_PATH", config_path)
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
 
         inputs = "\n".join([
             "Jane Smith",
@@ -231,7 +230,7 @@ class TestSetup:
     def test_setup_aborts_if_exists_and_no_overwrite(self, tmp_path, monkeypatch):
         config_path = tmp_path / ".env"
         config_path.write_text("HOURLY_RATE=100\n")
-        monkeypatch.setattr("timecard.cli.DEFAULT_CONFIG_PATH", config_path)
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
 
         result = runner.invoke(app, ["setup"], input="n\n")
         assert result.exit_code == 0
@@ -247,7 +246,7 @@ class TestSetup:
             'INVOICE_OUTPUT_DIR=~/invoices\n'
             'PAYMENT_INSTRUCTIONS="Pay me."\n'
         )
-        monkeypatch.setattr("timecard.cli.DEFAULT_CONFIG_PATH", config_path)
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
 
         # Accept all defaults by pressing Enter, except hourly rate
         inputs = "\n".join([
@@ -267,3 +266,16 @@ class TestSetup:
         assert 'CONTRACTOR_NAME="Jane Smith"' in content
         assert 'CLIENT_NAME="Acme"' in content
         assert "HOURLY_RATE=200" in content
+
+    def test_setup_escapes_quotes_in_values(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".env"
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
+
+        inputs = "\n".join([
+            'O\'Brien & "Co"',  # name with embedded double quotes
+            "", "", "", "", "100", "~/invoices", "Pay.",
+        ])
+        result = runner.invoke(app, ["setup"], input=inputs + "\n")
+        assert result.exit_code == 0
+        content = config_path.read_text()
+        assert '\\"' in content  # double quotes are escaped

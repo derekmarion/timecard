@@ -7,9 +7,13 @@ from typing import Optional
 
 from dotenv import dotenv_values
 
-# XDG Base Directory defaults
-DEFAULT_CONFIG_PATH = Path("~/.config/timecard/.env")
-DEFAULT_DB_PATH = Path("~/.local/share/timecard/timecard.db")
+# XDG Base Directory spec: respect XDG_CONFIG_HOME / XDG_DATA_HOME if set
+DEFAULT_CONFIG_PATH = (
+    Path(os.environ.get("XDG_CONFIG_HOME", "~/.config")) / "timecard" / ".env"
+)
+DEFAULT_DB_PATH = (
+    Path(os.environ.get("XDG_DATA_HOME", "~/.local/share")) / "timecard" / "timecard.db"
+)
 
 
 @dataclass
@@ -52,8 +56,9 @@ class Settings:
         path = Path(self.db_path).expanduser()
         if path.is_dir():
             raise ValueError(
-                f"TIMECARD_DB_PATH resolves to a directory, not a file: {path}\n"
-                "Set it to a file path, e.g. ~/.local/share/timecard/timecard.db"
+                f"DB path resolves to a directory, not a file: {path}\n"
+                "Set a file path via TIMECARD_DB_PATH or db_path in your .env file, "
+                "e.g. ~/.local/share/timecard/timecard.db"
             )
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
@@ -77,7 +82,7 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
 
     Args:
         env_path: Optional explicit path to .env file. If None, uses
-                  TIMECARD_CONFIG_PATH env var, then ~/.config/timecard/.env,
+                  TIMECARD_CONFIG_PATH env var, then XDG config location,
                   then .env in cwd.
 
     Returns:
@@ -100,8 +105,11 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
     file_vals: dict[str, Optional[str]] = dotenv_values(env_path) if env_path else {}
 
     def _get(key: str, default: str = "") -> str:
-        """Return env var if set, else file value, else default."""
-        return os.environ.get(key) or file_vals.get(key) or default
+        """Return env var if set (even if empty), else file value, else default."""
+        if key in os.environ:
+            return os.environ[key]
+        val = file_vals.get(key)
+        return val if val is not None else default
 
     return Settings(
         hourly_rate=float(_get("HOURLY_RATE", "150")),

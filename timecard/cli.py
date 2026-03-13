@@ -1,12 +1,14 @@
 """CLI interface for TimeCard — all Typer commands wired together."""
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 import typer
+from dotenv import dotenv_values
 
 from timecard.config import DEFAULT_CONFIG_PATH, Settings, load_settings
 from timecard.db import (
@@ -304,45 +306,62 @@ def auth(
     _output({"status": "authenticated"}, json_output)
 
 
+def _quote(value: str) -> str:
+    """Escape and double-quote a value for writing to a .env file."""
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
 @app.command()
 def setup() -> None:
-    """Interactive setup wizard — create or update ~/.config/timecard/.env."""
-    config_path = DEFAULT_CONFIG_PATH.expanduser()
+    """Interactive setup wizard — create or update the TimeCard config file."""
+    # Respect TIMECARD_CONFIG_PATH if set, otherwise use XDG default
+    config_path = Path(
+        os.environ.get("TIMECARD_CONFIG_PATH") or str(DEFAULT_CONFIG_PATH)
+    ).expanduser()
 
-    existing: Settings | None = None
+    # Read raw file values (no env var precedence) so edit prompts show
+    # what's actually in the file, not what's been overridden in the shell
+    file_vals: dict = {}
     if config_path.exists():
         typer.echo(f"Config file already exists at {config_path}")
         if not typer.confirm("Edit it?", default=True):
             typer.echo("Setup cancelled.")
             raise typer.Exit(code=0)
-        existing = load_settings(str(config_path))
+        file_vals = dotenv_values(str(config_path))
 
     typer.echo("TimeCard Setup Wizard")
     typer.echo("=" * 40)
     typer.echo("Press Enter to accept defaults shown in [brackets].\n")
 
-    defaults = existing or Settings()
-    contractor_name = typer.prompt("Your name", default=defaults.contractor_name)
-    contractor_address = typer.prompt("Your address", default=defaults.contractor_address)
-    contractor_email = typer.prompt("Your email", default=defaults.contractor_email)
-    client_name = typer.prompt("Client name", default=defaults.client_name)
-    client_address = typer.prompt("Client address", default=defaults.client_address)
-    hourly_rate = typer.prompt("Hourly rate (USD)", default=str(defaults.hourly_rate))
-    invoice_output_dir = typer.prompt("Invoice output directory", default=defaults.invoice_output_dir)
+    contractor_name = typer.prompt("Your name", default=file_vals.get("CONTRACTOR_NAME", ""))
+    contractor_address = typer.prompt("Your address", default=file_vals.get("CONTRACTOR_ADDRESS", ""))
+    contractor_email = typer.prompt("Your email", default=file_vals.get("CONTRACTOR_EMAIL", ""))
+    client_name = typer.prompt("Client name", default=file_vals.get("CLIENT_NAME", ""))
+    client_address = typer.prompt("Client address", default=file_vals.get("CLIENT_ADDRESS", ""))
+    hourly_rate: float = typer.prompt(
+        "Hourly rate (USD)",
+        default=float(file_vals.get("HOURLY_RATE", "150")),
+        type=float,
+    )
+    invoice_output_dir = typer.prompt(
+        "Invoice output directory",
+        default=file_vals.get("INVOICE_OUTPUT_DIR", "~/invoices"),
+    )
     payment_instructions = typer.prompt(
         "Payment instructions",
-        default=defaults.payment_instructions,
+        default=file_vals.get("PAYMENT_INSTRUCTIONS", "Please remit payment within 30 days."),
     )
 
     lines = [
-        f'CONTRACTOR_NAME="{contractor_name}"',
-        f'CONTRACTOR_ADDRESS="{contractor_address}"',
-        f'CONTRACTOR_EMAIL="{contractor_email}"',
-        f'CLIENT_NAME="{client_name}"',
-        f'CLIENT_ADDRESS="{client_address}"',
+        f"CONTRACTOR_NAME={_quote(contractor_name)}",
+        f"CONTRACTOR_ADDRESS={_quote(contractor_address)}",
+        f"CONTRACTOR_EMAIL={_quote(contractor_email)}",
+        f"CLIENT_NAME={_quote(client_name)}",
+        f"CLIENT_ADDRESS={_quote(client_address)}",
         f"HOURLY_RATE={hourly_rate}",
-        f"INVOICE_OUTPUT_DIR={invoice_output_dir}",
-        f'PAYMENT_INSTRUCTIONS="{payment_instructions}"',
+        f"INVOICE_OUTPUT_DIR={_quote(invoice_output_dir)}",
+        f"PAYMENT_INSTRUCTIONS={_quote(payment_instructions)}",
     ]
 
     config_path.parent.mkdir(parents=True, exist_ok=True)
