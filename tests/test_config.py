@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from timecard.config import Settings, load_settings
 
 
@@ -18,6 +20,11 @@ class TestSettings:
         db_path = s.get_db_path()
         assert db_path == tmp_path / "data" / "test.db"
         assert db_path.parent.exists()
+
+    def test_get_db_path_raises_if_directory(self, tmp_path):
+        s = Settings(db_path=str(tmp_path))
+        with pytest.raises(ValueError, match="resolves to a directory"):
+            s.get_db_path()
 
     def test_get_invoice_output_dir(self, tmp_path):
         s = Settings(invoice_output_dir=str(tmp_path / "invoices"))
@@ -65,6 +72,8 @@ class TestLoadSettings:
         for key in ["HOURLY_RATE", "TIMECARD_CONFIG_PATH"]:
             monkeypatch.delenv(key, raising=False)
 
+        # Ensure XDG config doesn't exist so we fall through to the cwd fallback
+        monkeypatch.setattr("timecard.config.DEFAULT_CONFIG_PATH", tmp_path / "no-xdg.env")
         with patch("timecard.config.Path.cwd", return_value=tmp_path):
             settings = load_settings()
         assert settings.hourly_rate == 175.0
@@ -76,3 +85,32 @@ class TestLoadSettings:
         settings = load_settings(str(tmp_path / "nonexistent.env"))
         assert settings.google_sheet_id is None
         monkeypatch.delenv("GOOGLE_SHEET_ID", raising=False)
+
+    def test_empty_env_var_wins_over_file_value(self, tmp_path, monkeypatch):
+        env_file = tmp_path / ".env"
+        env_file.write_text("CONTRACTOR_NAME=FileValue\n")
+        monkeypatch.setenv("CONTRACTOR_NAME", "")
+        settings = load_settings(str(env_file))
+        assert settings.contractor_name == ""
+        monkeypatch.delenv("CONTRACTOR_NAME", raising=False)
+
+    def test_xdg_config_home_respected(self, tmp_path, monkeypatch):
+        xdg_config = tmp_path / "xdg_config"
+        config_dir = xdg_config / "timecard"
+        config_dir.mkdir(parents=True)
+        (config_dir / ".env").write_text("HOURLY_RATE=99\n")
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_config))
+        monkeypatch.delenv("TIMECARD_CONFIG_PATH", raising=False)
+        monkeypatch.delenv("HOURLY_RATE", raising=False)
+
+        # Re-import to pick up updated DEFAULT_CONFIG_PATH
+        import importlib
+        import timecard.config as cfg_module
+        importlib.reload(cfg_module)
+        from timecard.config import load_settings as _load
+
+        settings = _load()
+        assert settings.hourly_rate == 99.0
+
+        importlib.reload(cfg_module)  # restore for other tests
+        monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)

@@ -202,3 +202,80 @@ class TestAuth:
     def test_auth_no_secrets_errors(self, mock_auth, tmp_db):
         result = runner.invoke(app, ["auth", "--json"])
         assert result.exit_code == 2
+
+
+class TestSetup:
+    def test_setup_creates_config(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".config" / "timecard" / ".env"
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
+
+        inputs = "\n".join([
+            "Jane Smith",
+            "456 Elm St",
+            "jane@example.com",
+            "Acme Corp",
+            "123 Main St",
+            "150",
+            "~/invoices",
+            "Please pay within 30 days.",
+        ])
+        result = runner.invoke(app, ["setup"], input=inputs + "\n")
+        assert result.exit_code == 0
+        assert config_path.exists()
+        content = config_path.read_text()
+        assert 'CONTRACTOR_NAME="Jane Smith"' in content
+        assert 'CLIENT_NAME="Acme Corp"' in content
+        assert "HOURLY_RATE=150" in content
+
+    def test_setup_aborts_if_exists_and_no_overwrite(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".env"
+        config_path.write_text("HOURLY_RATE=100\n")
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
+
+        result = runner.invoke(app, ["setup"], input="n\n")
+        assert result.exit_code == 0
+        assert "cancelled" in result.stdout.lower()
+        assert config_path.read_text() == "HOURLY_RATE=100\n"
+
+    def test_setup_edit_preserves_existing_values(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".env"
+        config_path.write_text(
+            'CONTRACTOR_NAME="Jane Smith"\nHOURLY_RATE=100\n'
+            'CLIENT_NAME="Acme"\nCONTRACTOR_ADDRESS=""\n'
+            'CONTRACTOR_EMAIL=""\nCLIENT_ADDRESS=""\n'
+            'INVOICE_OUTPUT_DIR=~/invoices\n'
+            'PAYMENT_INSTRUCTIONS="Pay me."\n'
+        )
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
+
+        # Accept all defaults by pressing Enter, except hourly rate
+        inputs = "\n".join([
+            "y",   # confirm edit
+            "",    # contractor name (keep "Jane Smith")
+            "",    # contractor address
+            "",    # contractor email
+            "",    # client name (keep "Acme")
+            "",    # client address
+            "200", # update hourly rate
+            "",    # invoice output dir
+            "",    # payment instructions
+        ])
+        result = runner.invoke(app, ["setup"], input=inputs + "\n")
+        assert result.exit_code == 0
+        content = config_path.read_text()
+        assert 'CONTRACTOR_NAME="Jane Smith"' in content
+        assert 'CLIENT_NAME="Acme"' in content
+        assert "HOURLY_RATE=200" in content
+
+    def test_setup_escapes_quotes_in_values(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".env"
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
+
+        inputs = "\n".join([
+            'O\'Brien & "Co"',  # name with embedded double quotes
+            "", "", "", "", "100", "~/invoices", "Pay.",
+        ])
+        result = runner.invoke(app, ["setup"], input=inputs + "\n")
+        assert result.exit_code == 0
+        content = config_path.read_text()
+        assert '\\"' in content  # double quotes are escaped

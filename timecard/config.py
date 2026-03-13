@@ -1,11 +1,19 @@
 """Configuration management for TimeCard — loads settings from .env files and environment variables."""
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values
+
+# XDG Base Directory spec: respect XDG_CONFIG_HOME / XDG_DATA_HOME if set
+DEFAULT_CONFIG_PATH = (
+    Path(os.environ.get("XDG_CONFIG_HOME", "~/.config")) / "timecard" / ".env"
+)
+DEFAULT_DB_PATH = (
+    Path(os.environ.get("XDG_DATA_HOME", "~/.local/share")) / "timecard" / "timecard.db"
+)
 
 
 @dataclass
@@ -34,15 +42,24 @@ class Settings:
     invoice_output_dir: str = "~/invoices"
     payment_instructions: str = "Please remit payment within 30 days."
     google_sheet_id: Optional[str] = None
-    db_path: str = "~/.timecard/timecard.db"
+    db_path: str = str(DEFAULT_DB_PATH)
 
     def get_db_path(self) -> Path:
         """Return the resolved database path, creating parent directories if needed.
 
         Returns:
             Absolute Path to the SQLite database file.
+
+        Raises:
+            ValueError: If the resolved path is an existing directory.
         """
         path = Path(self.db_path).expanduser()
+        if path.is_dir():
+            raise ValueError(
+                f"DB path resolves to a directory, not a file: {path}\n"
+                "Set a file path via TIMECARD_DB_PATH or db_path in your .env file, "
+                "e.g. ~/.local/share/timecard/timecard.db"
+            )
         path.parent.mkdir(parents=True, exist_ok=True)
         return path
 
@@ -65,7 +82,8 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
 
     Args:
         env_path: Optional explicit path to .env file. If None, uses
-                  TIMECARD_CONFIG_PATH env var or defaults to .env in cwd.
+                  TIMECARD_CONFIG_PATH env var, then XDG config location,
+                  then .env in cwd.
 
     Returns:
         A populated Settings instance.
@@ -73,22 +91,37 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
     if env_path is None:
         env_path = os.environ.get("TIMECARD_CONFIG_PATH")
 
-    if env_path:
-        load_dotenv(env_path)
-    else:
-        load_dotenv(Path.cwd() / ".env")
+    if env_path is None:
+        # Try XDG config location, then fall back to cwd .env
+        xdg_config = DEFAULT_CONFIG_PATH.expanduser()
+        if xdg_config.exists():
+            env_path = str(xdg_config)
+        else:
+            cwd_env = Path.cwd() / ".env"
+            if cwd_env.exists():
+                env_path = str(cwd_env)
+
+    # Read file values without modifying os.environ so env vars always win
+    file_vals: dict[str, Optional[str]] = dotenv_values(env_path) if env_path else {}
+
+    def _get(key: str, default: str = "") -> str:
+        """Return env var if set (even if empty), else file value, else default."""
+        if key in os.environ:
+            return os.environ[key]
+        val = file_vals.get(key)
+        return val if val is not None else default
 
     return Settings(
-        hourly_rate=float(os.environ.get("HOURLY_RATE", "150")),
-        contractor_name=os.environ.get("CONTRACTOR_NAME", ""),
-        contractor_address=os.environ.get("CONTRACTOR_ADDRESS", ""),
-        contractor_email=os.environ.get("CONTRACTOR_EMAIL", ""),
-        client_name=os.environ.get("CLIENT_NAME", ""),
-        client_address=os.environ.get("CLIENT_ADDRESS", ""),
-        invoice_output_dir=os.environ.get("INVOICE_OUTPUT_DIR", "~/invoices"),
-        payment_instructions=os.environ.get(
+        hourly_rate=float(_get("HOURLY_RATE", "150")),
+        contractor_name=_get("CONTRACTOR_NAME"),
+        contractor_address=_get("CONTRACTOR_ADDRESS"),
+        contractor_email=_get("CONTRACTOR_EMAIL"),
+        client_name=_get("CLIENT_NAME"),
+        client_address=_get("CLIENT_ADDRESS"),
+        invoice_output_dir=_get("INVOICE_OUTPUT_DIR", "~/invoices"),
+        payment_instructions=_get(
             "PAYMENT_INSTRUCTIONS", "Please remit payment within 30 days."
         ),
-        google_sheet_id=os.environ.get("GOOGLE_SHEET_ID") or None,
-        db_path=os.environ.get("TIMECARD_DB_PATH", "~/.timecard/timecard.db"),
+        google_sheet_id=_get("GOOGLE_SHEET_ID") or None,
+        db_path=_get("TIMECARD_DB_PATH", str(DEFAULT_DB_PATH)),
     )
