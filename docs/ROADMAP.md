@@ -14,7 +14,7 @@
 - [ ] Command autocomplete installed automatically during install (`install.sh` / `install.ps1`)
 - [x] Interactive setup wizard — prompt for contractor/client info during install to generate `.env`
 - [x] Update script that clears the uv cache before reinstalling to guarantee new changes are picked up (`timecard update` or a shell script)
-- [ ] `timecard pause` / `timecard resume` commands to pause an active session without losing the entry
+- [x] `timecard pause` / `timecard resume` commands to pause an active session without losing the entry
 
 ## v1.2 — Invoice Number Control
 - [ ] Configurable invoice number start offset via `INVOICE_NUMBER_START` in `.env` — for users migrating from a prior invoicing system
