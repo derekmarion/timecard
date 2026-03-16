@@ -29,7 +29,9 @@ This starts a stdio-based MCP server. Configure it in your agent client (e.g., C
 |---|---|---|
 | `start_timer` | *(none)* | Start a timer session |
 | `stop_timer` | *(none)* | Stop current session and log the entry |
-| `get_status` | *(none)* | Check if a timer is running and for how long |
+| `pause_timer` | *(none)* | Pause the current timer session |
+| `resume_timer` | *(none)* | Resume a paused timer session |
+| `get_status` | *(none)* | Check if a timer is running/paused and for how long |
 | `add_entry_tool` | `date: str`, `hours: float`, `note?: str` | Manually log a time entry |
 | `get_log` | `period?: str` | Return entries as a list (optional period filter) |
 | `edit_entry` | `id: int`, `hours?: float`, `note?: str` | Update an existing entry |

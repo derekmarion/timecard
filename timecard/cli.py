@@ -91,6 +91,40 @@ def stop(
 
 
 @app.command()
+def pause(
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Pause the current timer session."""
+    from timecard.timer import pause_timer
+
+    conn = _get_conn()
+    try:
+        paused_at = pause_timer(conn)
+    except ValueError as e:
+        _output({"error": str(e)}, json_output)
+        raise typer.Exit(code=1)
+
+    _output({"status": "paused", "paused_at": paused_at}, json_output)
+
+
+@app.command()
+def resume(
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Resume a paused timer session."""
+    from timecard.timer import resume_timer
+
+    conn = _get_conn()
+    try:
+        resumed_at = resume_timer(conn)
+    except ValueError as e:
+        _output({"error": str(e)}, json_output)
+        raise typer.Exit(code=1)
+
+    _output({"status": "resumed", "resumed_at": resumed_at}, json_output)
+
+
+@app.command()
 def status(
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:

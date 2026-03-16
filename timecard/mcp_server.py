@@ -61,6 +61,34 @@ def stop_timer() -> dict:
 
 
 @mcp.tool()
+def pause_timer() -> dict:
+    """Pause the current timer session.
+
+    Returns:
+        Dict with 'status' and 'paused_at' keys.
+    """
+    from timecard.timer import pause_timer as _pause
+
+    conn = _get_conn()
+    paused_at = _pause(conn)
+    return {"status": "paused", "paused_at": paused_at}
+
+
+@mcp.tool()
+def resume_timer() -> dict:
+    """Resume a paused timer session.
+
+    Returns:
+        Dict with 'status' and 'resumed_at' keys.
+    """
+    from timecard.timer import resume_timer as _resume
+
+    conn = _get_conn()
+    resumed_at = _resume(conn)
+    return {"status": "resumed", "resumed_at": resumed_at}
+
+
+@mcp.tool()
 def get_status() -> dict:
     """Check if a timer is currently running and for how long.
 
