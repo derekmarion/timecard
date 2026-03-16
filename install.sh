@@ -36,5 +36,18 @@ fi
 echo "Installing TimeCard..."
 uv tool install git+https://github.com/derekmarion/timecard.git
 
+# 4. Install shell completion
+SHELL_NAME=$(basename "${SHELL:-}")
+case "$SHELL_NAME" in
+    bash|zsh|fish)
+        echo "Installing shell completion for $SHELL_NAME..."
+        timecard --install-completion "$SHELL_NAME" 2>/dev/null \
+            || echo "Warning: Could not install shell completion. Run 'timecard --install-completion' manually."
+        ;;
+    *)
+        echo "Note: Run 'timecard --install-completion' to enable tab completion."
+        ;;
+esac
+
 echo ""
 echo "Done! Run 'timecard --help' to get started."

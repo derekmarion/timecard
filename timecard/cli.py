@@ -436,6 +436,17 @@ def update(
         typer.echo("Installing latest TimeCard from GitHub...")
     _run(["uv", "tool", "install", "--force", _REPO_URL], "Failed to install")
 
+    if not json_output:
+        typer.echo("Refreshing shell completion...")
+    try:
+        subprocess.run(
+            ["timecard", "--install-completion"],
+            capture_output=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        pass  # timecard not on PATH yet; user can run manually
+
     _output({"status": "updated"}, json_output)
 
 

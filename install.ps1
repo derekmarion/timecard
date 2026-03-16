@@ -28,5 +28,13 @@ if (-not (Test-Path $gtkPath)) {
 Write-Host "Installing TimeCard..."
 uv tool install git+https://github.com/derekmarion/timecard.git
 
+# 4. Install PowerShell completion
+Write-Host "Installing PowerShell completion..."
+try {
+    timecard --install-completion powershell | Out-Null
+} catch {
+    Write-Host "Note: Could not install completion. Run 'timecard --install-completion' manually."
+}
+
 Write-Host ""
 Write-Host "Done! Run 'timecard --help' to get started."
