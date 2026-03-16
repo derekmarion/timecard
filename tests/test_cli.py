@@ -238,6 +238,14 @@ class TestInvoice:
         result = runner.invoke(app, ["invoice", "--json"])
         assert result.exit_code == 1
 
+    @patch("timecard.invoice._write_pdf")
+    def test_invoice_number_override(self, mock_pdf, tmp_db):
+        runner.invoke(app, ["add", "--date", "2025-01-15", "--hours", "2", "--note", "Work"])
+        result = runner.invoke(app, ["invoice", "--number", "42", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["invoice_number"] == "INV-0042"
+
 
 class TestSync:
     def test_sync_no_sheet_id_errors(self, tmp_db):

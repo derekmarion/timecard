@@ -43,6 +43,7 @@ class Settings:
     payment_instructions: str = "Please remit payment within 30 days."
     google_sheet_id: Optional[str] = None
     db_path: str = str(DEFAULT_DB_PATH)
+    invoice_number_start: int = 0
 
     def get_db_path(self) -> Path:
         """Return the resolved database path, creating parent directories if needed.
@@ -124,4 +125,5 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
         ),
         google_sheet_id=_get("GOOGLE_SHEET_ID") or None,
         db_path=_get("TIMECARD_DB_PATH", str(DEFAULT_DB_PATH)),
+        invoice_number_start=int(_get("INVOICE_NUMBER_START", "0")),
     )

@@ -276,19 +276,22 @@ def add_invoice(conn: sqlite3.Connection, invoice: Invoice) -> int:
     return cur.lastrowid
 
 
-def get_next_invoice_number(conn: sqlite3.Connection) -> str:
+def get_next_invoice_number(conn: sqlite3.Connection, start_offset: int = 0) -> str:
     """Generate the next sequential invoice number.
 
     Format: INV-NNNN (zero-padded to 4 digits).
 
     Args:
         conn: An open SQLite connection.
+        start_offset: Added to the sequential count so invoice numbering
+                      can begin at a value other than 1. For example,
+                      start_offset=100 makes the first invoice INV-0101.
 
     Returns:
         The next invoice number string (e.g. "INV-0001").
     """
     row = conn.execute("SELECT MAX(id) as max_id FROM invoices").fetchone()
-    next_num = (row["max_id"] or 0) + 1
+    next_num = (row["max_id"] or 0) + 1 + start_offset
     return f"INV-{next_num:04d}"
 
 

@@ -68,6 +68,7 @@ def generate_invoice(
     period: Optional[str] = None,
     output_path: Optional[str] = None,
     note: Optional[str] = None,
+    number: Optional[int] = None,
 ) -> Invoice:
     """Generate a PDF invoice for uninvoiced entries.
 
@@ -83,6 +84,8 @@ def generate_invoice(
         output_path: Optional explicit path for the PDF. If None, auto-generates
                      a filename in the configured invoice output directory.
         note: Optional note to include on the invoice.
+        number: Optional integer to use as the invoice number instead of the
+                auto-incremented value. Formatted as INV-NNNN.
 
     Returns:
         The created Invoice record.
@@ -113,7 +116,10 @@ def generate_invoice(
 
     total_hours = round(sum(e.hours() for e in entries), 2)
     total_amount = round(total_hours * settings.hourly_rate, 2)
-    invoice_number = get_next_invoice_number(conn)
+    if number is not None:
+        invoice_number = f"INV-{number:04d}"
+    else:
+        invoice_number = get_next_invoice_number(conn, settings.invoice_number_start)
     created_at = datetime.now(timezone.utc).isoformat()
 
     # Determine output path

@@ -277,6 +277,9 @@ def invoice(
     ),
     output: Optional[str] = typer.Option(None, help="Output path for the PDF"),
     note: Optional[str] = typer.Option(None, help="Invoice note"),
+    number: Optional[int] = typer.Option(
+        None, "--number", help="Override the auto-incremented invoice number"
+    ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Generate a PDF invoice for uninvoiced entries."""
@@ -287,7 +290,7 @@ def invoice(
 
     try:
         inv = generate_invoice(
-            conn, settings, period=period, output_path=output, note=note
+            conn, settings, period=period, output_path=output, note=note, number=number
         )
     except ValueError as e:
         _output({"error": str(e)}, json_output)
