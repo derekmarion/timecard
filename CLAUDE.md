@@ -29,7 +29,7 @@ TimeCard is a Python CLI for 1099 contractors. The package lives in `timecard/` 
 4. `timer.py` — start/stop/pause/resume/status using `active_session` table (enforces max 1 row)
 5. `invoice.py` — PDF generation via WeasyPrint from `timecard/templates/invoice.html`; marks entries as invoiced in DB after generation
 6. `sync.py` — Google Sheets upsert via gspread; `authenticate()` runs OAuth flow saving credentials locally
-7. `cli.py` — Typer app wiring all commands; every command accepts `--json` flag for machine-readable output
+7. `cli.py` — Typer app wiring all commands; most commands accept a `--json` flag for machine-readable output (the `export` command outputs CSV and does not support `--json`)
 8. `mcp_server.py` — MCP server exposing the same functions as thin wrappers (no business logic here)
 9. `__main__.py` — entrypoint
 
