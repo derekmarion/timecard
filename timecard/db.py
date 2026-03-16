@@ -289,7 +289,12 @@ def get_next_invoice_number(conn: sqlite3.Connection, start_offset: int = 0) -> 
 
     Returns:
         The next invoice number string (e.g. "INV-0001").
+
+    Raises:
+        ValueError: If start_offset is negative.
     """
+    if start_offset < 0:
+        raise ValueError(f"start_offset must be >= 0, got {start_offset}")
     row = conn.execute("SELECT MAX(id) as max_id FROM invoices").fetchone()
     next_num = (row["max_id"] or 0) + 1 + start_offset
     return f"INV-{next_num:04d}"

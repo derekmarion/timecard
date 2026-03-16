@@ -31,6 +31,10 @@ class Settings:
         payment_instructions: Payment instructions included on invoices.
         google_sheet_id: Optional Google Sheet ID for sync.
         db_path: Path to the SQLite database file.
+        invoice_number_start: Offset added to the sequential invoice counter.
+                              Set via INVOICE_NUMBER_START for users migrating
+                              from a prior invoicing system (e.g. 100 → first
+                              invoice is INV-0101).
     """
 
     hourly_rate: float = 150.0

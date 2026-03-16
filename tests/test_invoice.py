@@ -219,14 +219,14 @@ class TestGenerateInvoice:
         assert inv2.invoice_number == "INV-0102"
 
     @patch("timecard.invoice._write_pdf")
-    def test_number_override(self, mock_pdf, conn, settings, tmp_path):
+    def test_number_override(self, mock_pdf, conn, settings):
         """--number overrides the auto-incremented invoice number."""
         add_entry(conn, Entry(started_at="2025-01-15T09:00:00", duration_minutes=60))
         inv = generate_invoice(conn, settings, number=42)
         assert inv.invoice_number == "INV-0042"
 
     @patch("timecard.invoice._write_pdf")
-    def test_number_override_does_not_affect_next_auto(self, mock_pdf, conn, settings, tmp_path):
+    def test_number_override_does_not_affect_next_auto(self, mock_pdf, conn, settings):
         """A manual number override doesn't shift subsequent auto-numbers."""
         add_entry(conn, Entry(started_at="2025-01-15T09:00:00", duration_minutes=60))
         generate_invoice(conn, settings, number=99)
@@ -235,3 +235,26 @@ class TestGenerateInvoice:
         inv2 = generate_invoice(conn, settings)
         # The DB has 1 invoice row now, so next auto number is INV-0002
         assert inv2.invoice_number == "INV-0002"
+
+    @patch("timecard.invoice._write_pdf")
+    def test_number_override_duplicate_raises(self, mock_pdf, conn, settings):
+        """Reusing an existing invoice number raises ValueError."""
+        add_entry(conn, Entry(started_at="2025-01-15T09:00:00", duration_minutes=60))
+        generate_invoice(conn, settings, number=42)
+
+        add_entry(conn, Entry(started_at="2025-01-16T09:00:00", duration_minutes=60))
+        with pytest.raises(ValueError, match="INV-0042 already exists"):
+            generate_invoice(conn, settings, number=42)
+
+    @patch("timecard.invoice._write_pdf")
+    def test_number_override_negative_raises(self, mock_pdf, conn, settings):
+        """A negative invoice number raises ValueError."""
+        add_entry(conn, Entry(started_at="2025-01-15T09:00:00", duration_minutes=60))
+        with pytest.raises(ValueError, match="must be >= 0"):
+            generate_invoice(conn, settings, number=-1)
+
+    def test_start_offset_negative_raises(self, conn):
+        """A negative start_offset in get_next_invoice_number raises ValueError."""
+        from timecard.db import get_next_invoice_number
+        with pytest.raises(ValueError, match="start_offset must be >= 0"):
+            get_next_invoice_number(conn, start_offset=-1)
