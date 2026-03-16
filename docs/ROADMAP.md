@@ -17,8 +17,8 @@
 - [x] `timecard pause` / `timecard resume` commands to pause an active session without losing the entry
 
 ## v1.2 — Invoice Number Control
-- [ ] Configurable invoice number start offset via `INVOICE_NUMBER_START` in `.env` — for users migrating from a prior invoicing system
-- [ ] `--number` flag on `timecard invoice` to override the auto-incremented number for a single invocation
+- [x] Configurable invoice number start offset via `INVOICE_NUMBER_START` in `.env` — for users migrating from a prior invoicing system
+- [x] `--number` flag on `timecard invoice` to override the auto-incremented number for a single invocation
 
 ## v2.0 — Multi-Client Support
 - [ ] Multiple clients with per-client rates

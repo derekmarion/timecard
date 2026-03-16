@@ -68,6 +68,7 @@ def generate_invoice(
     period: Optional[str] = None,
     output_path: Optional[str] = None,
     note: Optional[str] = None,
+    number: Optional[int] = None,
 ) -> Invoice:
     """Generate a PDF invoice for uninvoiced entries.
 
@@ -83,6 +84,8 @@ def generate_invoice(
         output_path: Optional explicit path for the PDF. If None, auto-generates
                      a filename in the configured invoice output directory.
         note: Optional note to include on the invoice.
+        number: Optional integer to use as the invoice number instead of the
+                auto-incremented value. Formatted as INV-NNNN.
 
     Returns:
         The created Invoice record.
@@ -113,13 +116,25 @@ def generate_invoice(
 
     total_hours = round(sum(e.hours() for e in entries), 2)
     total_amount = round(total_hours * settings.hourly_rate, 2)
-    invoice_number = get_next_invoice_number(conn)
+    if number is not None:
+        if number < 0:
+            raise ValueError(f"Invoice number must be >= 0, got {number}")
+        invoice_number = f"INV-{number:04d}"
+        existing = conn.execute(
+            "SELECT id FROM invoices WHERE invoice_number = :n", {"n": invoice_number}
+        ).fetchone()
+        if existing is not None:
+            raise ValueError(f"Invoice number {invoice_number} already exists.")
+    else:
+        invoice_number = get_next_invoice_number(conn, settings.invoice_number_start)
     created_at = datetime.now(timezone.utc).isoformat()
 
     # Determine output path
     if output_path is None:
         out_dir = settings.get_invoice_output_dir()
         output_path = str(out_dir / f"{invoice_number}.pdf")
+        if Path(output_path).exists():
+            raise ValueError(f"Output file already exists: {output_path}")
 
     # Render HTML from template
     html_content = _render_invoice_html(

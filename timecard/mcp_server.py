@@ -210,7 +210,7 @@ def export_csv(period: Optional[str] = None) -> str:
 
 @mcp.tool()
 def generate_invoice(
-    period: Optional[str] = None, note: Optional[str] = None
+    period: Optional[str] = None, note: Optional[str] = None, number: Optional[int] = None
 ) -> dict:
     """Generate a PDF invoice for uninvoiced time entries.
 
@@ -218,6 +218,7 @@ def generate_invoice(
         period: Optional billing period — 'week', 'biweekly', or 'month'.
                 If omitted, invoices all uninvoiced entries.
         note: Optional note to include on the invoice.
+        number: Optional integer to override the auto-incremented invoice number.
 
     Returns:
         Dict with invoice details.
@@ -226,7 +227,7 @@ def generate_invoice(
 
     conn = _get_conn()
     settings = load_settings()
-    inv = _generate(conn, settings, period=period, note=note)
+    inv = _generate(conn, settings, period=period, note=note, number=number)
     return {
         "status": "generated",
         "invoice_number": inv.invoice_number,
