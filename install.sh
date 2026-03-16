@@ -34,7 +34,7 @@ fi
 
 # 3. Install timecard
 echo "Installing TimeCard..."
-uv tool install .
+uv tool install git+https://github.com/derekmarion/timecard.git
 
 echo ""
 echo "Done! Run 'timecard --help' to get started."

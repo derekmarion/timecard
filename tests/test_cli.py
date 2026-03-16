@@ -2,7 +2,7 @@
 
 import json
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
@@ -329,3 +329,71 @@ class TestSetup:
         assert result.exit_code == 0
         content = config_path.read_text()
         assert '\\"' in content  # double quotes are escaped
+
+
+class TestUpdate:
+    def _make_proc(self, returncode=0, stderr="", stdout=""):
+        m = MagicMock()
+        m.returncode = returncode
+        m.stderr = stderr
+        m.stdout = stdout
+        return m
+
+    @patch("subprocess.run")
+    def test_update_success(self, mock_run):
+        mock_run.return_value = self._make_proc(returncode=0)
+        result = runner.invoke(app, ["update"])
+        assert result.exit_code == 0
+        assert "status: updated" in result.stdout
+
+    @patch("subprocess.run")
+    def test_update_success_json(self, mock_run):
+        mock_run.return_value = self._make_proc(returncode=0)
+        result = runner.invoke(app, ["update", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["status"] == "updated"
+
+    @patch("subprocess.run")
+    def test_update_cache_clear_fails(self, mock_run):
+        mock_run.return_value = self._make_proc(returncode=1, stderr="cache error")
+        result = runner.invoke(app, ["update", "--json"])
+        assert result.exit_code == 2
+        data = json.loads(result.stdout)
+        assert "error" in data
+        assert "cache error" in data["error"]
+
+    @patch("subprocess.run")
+    def test_update_install_fails(self, mock_run):
+        def side_effect(cmd, **kwargs):
+            if "cache" in cmd:
+                return self._make_proc(returncode=0)
+            return self._make_proc(returncode=1, stderr="install error")
+
+        mock_run.side_effect = side_effect
+        result = runner.invoke(app, ["update", "--json"])
+        assert result.exit_code == 2
+        data = json.loads(result.stdout)
+        assert "error" in data
+        assert "install error" in data["error"]
+
+    @patch("subprocess.run")
+    def test_update_error_includes_stdout(self, mock_run):
+        m = MagicMock()
+        m.returncode = 1
+        m.stderr = "stderr msg"
+        m.stdout = "stdout msg"
+        mock_run.return_value = m
+        result = runner.invoke(app, ["update", "--json"])
+        assert result.exit_code == 2
+        data = json.loads(result.stdout)
+        assert "stderr msg" in data["error"]
+        assert "stdout msg" in data["error"]
+
+    @patch("subprocess.run", side_effect=FileNotFoundError("uv not found"))
+    def test_update_uv_not_found(self, mock_run):
+        result = runner.invoke(app, ["update", "--json"])
+        assert result.exit_code == 2
+        data = json.loads(result.stdout)
+        assert "error" in data
+        assert "uv not found" in data["error"]

@@ -26,7 +26,7 @@ if (-not (Test-Path $gtkPath)) {
 
 # 3. Install timecard
 Write-Host "Installing TimeCard..."
-uv tool install .
+uv tool install git+https://github.com/derekmarion/timecard.git
 
 Write-Host ""
 Write-Host "Done! Run 'timecard --help' to get started."

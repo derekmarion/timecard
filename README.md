@@ -9,21 +9,19 @@ A Python CLI tool for 1099 contractors to track billable hours, manage time entr
 
 ## Installation
 
-### Mac
+### Mac / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/derekmarion/timecard/main/install.sh | bash
+```
+
+Or clone the repo and run:
 
 ```bash
 ./install.sh
 ```
 
-This installs `uv` (if absent), WeasyPrint system deps via Homebrew (`pango`, `libffi`), and the `timecard` CLI.
-
-### Linux (Debian/Ubuntu)
-
-```bash
-./install.sh
-```
-
-Installs `uv` and WeasyPrint deps via `apt` (`libpango-1.0-0`, `libpangocairo-1.0-0`, `libgdk-pixbuf2.0-0`, `libffi-dev`).
+This installs `uv` (if absent), WeasyPrint system deps, and the `timecard` CLI from the GitHub repository.
 
 ### Windows
 
@@ -38,6 +36,14 @@ Installs `uv` and prompts you to install the [GTK3 runtime](https://github.com/n
 ```bash
 uv tool install .
 ```
+
+## Updating
+
+```bash
+timecard update
+```
+
+Clears the uv cache for TimeCard and reinstalls the latest version from GitHub. Works from any directory.
 
 ## Configuration
 
