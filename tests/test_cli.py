@@ -66,6 +66,56 @@ class TestStartStop:
         assert data["running"] is True
 
 
+class TestPauseResume:
+    def test_pause(self, tmp_db):
+        runner.invoke(app, ["start"])
+        result = runner.invoke(app, ["pause", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["status"] == "paused"
+
+    def test_pause_without_timer_errors(self, tmp_db):
+        result = runner.invoke(app, ["pause", "--json"])
+        assert result.exit_code == 1
+        data = json.loads(result.stdout)
+        assert "error" in data
+
+    def test_pause_already_paused_errors(self, tmp_db):
+        runner.invoke(app, ["start"])
+        runner.invoke(app, ["pause"])
+        result = runner.invoke(app, ["pause", "--json"])
+        assert result.exit_code == 1
+
+    def test_resume(self, tmp_db):
+        runner.invoke(app, ["start"])
+        runner.invoke(app, ["pause"])
+        result = runner.invoke(app, ["resume", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["status"] == "resumed"
+
+    def test_resume_without_pause_errors(self, tmp_db):
+        runner.invoke(app, ["start"])
+        result = runner.invoke(app, ["resume", "--json"])
+        assert result.exit_code == 1
+
+    def test_stop_while_paused(self, tmp_db):
+        runner.invoke(app, ["start"])
+        runner.invoke(app, ["pause"])
+        result = runner.invoke(app, ["stop", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["status"] == "stopped"
+
+    def test_status_shows_paused(self, tmp_db):
+        runner.invoke(app, ["start"])
+        runner.invoke(app, ["pause"])
+        result = runner.invoke(app, ["status", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["paused"] is True
+
+
 class TestAdd:
     def test_add_entry(self, tmp_db):
         result = runner.invoke(

@@ -32,6 +32,13 @@ def _init_schema(conn: sqlite3.Connection) -> None:
     """
     conn.executescript(
         """
+        CREATE TABLE IF NOT EXISTS _schema_version (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            version INTEGER NOT NULL DEFAULT 0
+        );
+
+        INSERT OR IGNORE INTO _schema_version (id, version) VALUES (1, 0);
+
         CREATE TABLE IF NOT EXISTS entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             started_at TEXT,
@@ -57,10 +64,29 @@ def _init_schema(conn: sqlite3.Connection) -> None:
 
         CREATE TABLE IF NOT EXISTS active_session (
             id INTEGER PRIMARY KEY CHECK (id = 1),
-            started_at TEXT NOT NULL
+            started_at TEXT NOT NULL,
+            paused_at TEXT,
+            paused_duration_minutes REAL DEFAULT 0
         );
         """
     )
+    _migrate(conn)
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Run incremental schema migrations."""
+    row = conn.execute("SELECT version FROM _schema_version WHERE id = 1").fetchone()
+    version = row["version"] if row else 0
+
+    if version < 1:
+        # Add pause/resume columns to active_session
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(active_session)").fetchall()}
+        if "paused_at" not in cols:
+            conn.execute("ALTER TABLE active_session ADD COLUMN paused_at TEXT")
+        if "paused_duration_minutes" not in cols:
+            conn.execute("ALTER TABLE active_session ADD COLUMN paused_duration_minutes REAL DEFAULT 0")
+        conn.execute("UPDATE _schema_version SET version = 1 WHERE id = 1")
+        conn.commit()
 
 
 # --- Entry CRUD ---
@@ -283,7 +309,12 @@ def get_active_session(conn: sqlite3.Connection) -> Optional[ActiveSession]:
     ).fetchone()
     if row is None:
         return None
-    return ActiveSession(id=row["id"], started_at=row["started_at"])
+    return ActiveSession(
+        id=row["id"],
+        started_at=row["started_at"],
+        paused_at=row["paused_at"],
+        paused_duration_minutes=row["paused_duration_minutes"] or 0.0,
+    )
 
 
 def start_session(conn: sqlite3.Connection, started_at: str) -> None:
@@ -322,6 +353,71 @@ def stop_session(conn: sqlite3.Connection) -> ActiveSession:
         raise ValueError("No timer session is currently running.")
     conn.execute("DELETE FROM active_session WHERE id = :id", {"id": 1})
     conn.commit()
+    return session
+
+
+def pause_session(conn: sqlite3.Connection, paused_at: str) -> ActiveSession:
+    """Pause the current timer session.
+
+    Args:
+        conn: An open SQLite connection.
+        paused_at: ISO 8601 timestamp for when the pause started.
+
+    Returns:
+        The updated ActiveSession.
+
+    Raises:
+        ValueError: If no session is running or it is already paused.
+    """
+    session = get_active_session(conn)
+    if session is None:
+        raise ValueError("No timer session is currently running.")
+    if session.is_paused:
+        raise ValueError("Timer is already paused.")
+    conn.execute(
+        "UPDATE active_session SET paused_at = :paused_at WHERE id = 1",
+        {"paused_at": paused_at},
+    )
+    conn.commit()
+    session.paused_at = paused_at
+    return session
+
+
+def resume_session(conn: sqlite3.Connection, resumed_at: str) -> ActiveSession:
+    """Resume a paused timer session.
+
+    Adds the paused interval to paused_duration_minutes and clears paused_at.
+
+    Args:
+        conn: An open SQLite connection.
+        resumed_at: ISO 8601 timestamp for when the session is resumed.
+
+    Returns:
+        The updated ActiveSession.
+
+    Raises:
+        ValueError: If no session is running or it is not paused.
+    """
+    session = get_active_session(conn)
+    if session is None:
+        raise ValueError("No timer session is currently running.")
+    if not session.is_paused:
+        raise ValueError("Timer is not paused.")
+
+    from datetime import datetime
+
+    pause_start = datetime.fromisoformat(session.paused_at)
+    resume_time = datetime.fromisoformat(resumed_at)
+    added = (resume_time - pause_start).total_seconds() / 60
+    new_paused = session.paused_duration_minutes + added
+
+    conn.execute(
+        "UPDATE active_session SET paused_at = NULL, paused_duration_minutes = :dur WHERE id = 1",
+        {"dur": new_paused},
+    )
+    conn.commit()
+    session.paused_at = None
+    session.paused_duration_minutes = new_paused
     return session
 
 

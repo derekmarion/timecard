@@ -68,19 +68,35 @@ class ActiveSession:
     Args:
         id: Always 1 (only one active session allowed).
         started_at: ISO 8601 timestamp when the timer was started.
+        paused_at: ISO 8601 timestamp when the timer was paused (None if running).
+        paused_duration_minutes: Accumulated minutes spent paused.
     """
 
     id: int = 1
     started_at: Optional[str] = None
+    paused_at: Optional[str] = None
+    paused_duration_minutes: float = 0.0
+
+    @property
+    def is_paused(self) -> bool:
+        """Return True if the session is currently paused."""
+        return self.paused_at is not None
 
     def elapsed_minutes(self) -> float:
-        """Return minutes elapsed since the session started.
+        """Return active (non-paused) minutes elapsed since the session started.
 
         Returns:
-            Minutes elapsed, or 0.0 if started_at is not set.
+            Minutes elapsed excluding paused time, or 0.0 if started_at is not set.
         """
         if self.started_at is None:
             return 0.0
         start = datetime.fromisoformat(self.started_at)
         now = datetime.now(start.tzinfo)
-        return (now - start).total_seconds() / 60
+        total = (now - start).total_seconds() / 60
+
+        paused = self.paused_duration_minutes
+        if self.paused_at is not None:
+            pause_start = datetime.fromisoformat(self.paused_at)
+            paused += (now - pause_start).total_seconds() / 60
+
+        return total - paused
