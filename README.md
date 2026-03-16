@@ -62,6 +62,7 @@ Create a `.env` file in your working directory or set environment variables:
 | `GOOGLE_SHEET_ID` | Google Sheet ID for sync (optional) | `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74Og...` |
 | `TIMECARD_DB_PATH` | Override database location | `~/.timecard/timecard.db` |
 | `TIMECARD_CONFIG_PATH` | Override .env file location | `/path/to/.env` |
+| `INVOICE_NUMBER_START` | Offset added to auto-incremented invoice numbers (for migrating from a prior system) | `100` → first invoice is `INV-0101` |
 
 > **Security note:** Do not include bank account or routing numbers in your config or invoice templates. Provide banking details to your client once via their secure vendor onboarding process.
 
@@ -143,9 +144,15 @@ total_amount: 451.5
 pdf_path: /home/user/invoices/INV-0001.pdf
 
 $ timecard invoice --period month --output ./custom-invoice.pdf
+
+# Override the invoice number for a single invocation
+$ timecard invoice --number 42
+invoice_number: INV-0042
 ```
 
 When no `--period` is specified, all uninvoiced entries are included. Period options (`week`, `biweekly`, `month`) use calendar-aligned windows (e.g., last complete Mon–Sun week, last complete calendar month).
+
+To start invoice numbering at a specific offset (e.g. when migrating from a prior system), set `INVOICE_NUMBER_START` in your `.env`. With `INVOICE_NUMBER_START=100`, the first invoice will be `INV-0101`.
 
 ### Sync to Google Sheets
 

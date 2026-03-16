@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - `timecard setup` interactive wizard — prompts for contractor/client info and writes `~/.config/timecard/.env`
 - Config file now defaults to `~/.config/timecard/.env` (XDG Base Directory spec)
 - Database now defaults to `~/.local/share/timecard/timecard.db` (XDG Base Directory spec)
+- `INVOICE_NUMBER_START` config variable — offsets auto-incremented invoice numbers for users migrating from a prior invoicing system (e.g. `INVOICE_NUMBER_START=100` → first invoice is `INV-0101`)
+- `--number` flag on `timecard invoice` — overrides the auto-incremented invoice number for a single invocation; raises an error if the number is already in use
 
 ### Changed
 - Install scripts now install from the GitHub git URL instead of requiring a local clone
