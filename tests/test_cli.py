@@ -332,10 +332,11 @@ class TestSetup:
 
 
 class TestUpdate:
-    def _make_proc(self, returncode=0, stderr=""):
+    def _make_proc(self, returncode=0, stderr="", stdout=""):
         m = MagicMock()
         m.returncode = returncode
         m.stderr = stderr
+        m.stdout = stdout
         return m
 
     @patch("subprocess.run")
@@ -376,7 +377,23 @@ class TestUpdate:
         assert "error" in data
         assert "install error" in data["error"]
 
+    @patch("subprocess.run")
+    def test_update_error_includes_stdout(self, mock_run):
+        m = MagicMock()
+        m.returncode = 1
+        m.stderr = "stderr msg"
+        m.stdout = "stdout msg"
+        mock_run.return_value = m
+        result = runner.invoke(app, ["update", "--json"])
+        assert result.exit_code == 2
+        data = json.loads(result.stdout)
+        assert "stderr msg" in data["error"]
+        assert "stdout msg" in data["error"]
+
     @patch("subprocess.run", side_effect=FileNotFoundError("uv not found"))
     def test_update_uv_not_found(self, mock_run):
         result = runner.invoke(app, ["update", "--json"])
-        assert result.exit_code != 0
+        assert result.exit_code == 2
+        data = json.loads(result.stdout)
+        assert "error" in data
+        assert "uv not found" in data["error"]

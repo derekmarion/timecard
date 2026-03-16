@@ -414,23 +414,24 @@ def update(
 
     _REPO_URL = "git+https://github.com/derekmarion/timecard.git"
 
+    def _run(cmd: list, label: str) -> None:
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True)
+        except FileNotFoundError:
+            _output({"error": "uv not found — ensure uv is installed and on PATH."}, json_output)
+            raise typer.Exit(code=2)
+        if result.returncode != 0:
+            parts = [s.strip() for s in (result.stderr, result.stdout) if s.strip()]
+            _output({"error": f"{label}: {' | '.join(parts)}"}, json_output)
+            raise typer.Exit(code=2)
+
     if not json_output:
         typer.echo("Clearing uv cache...")
-    result = subprocess.run(["uv", "cache", "clean", "timecard"], capture_output=True, text=True)
-    if result.returncode != 0:
-        _output({"error": f"Failed to clear cache: {result.stderr.strip()}"}, json_output)
-        raise typer.Exit(code=2)
+    _run(["uv", "cache", "clean", "timecard"], "Failed to clear cache")
 
     if not json_output:
         typer.echo("Installing latest TimeCard from GitHub...")
-    result = subprocess.run(
-        ["uv", "tool", "install", "--force", _REPO_URL],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        _output({"error": f"Failed to install: {result.stderr.strip()}"}, json_output)
-        raise typer.Exit(code=2)
+    _run(["uv", "tool", "install", "--force", _REPO_URL], "Failed to install")
 
     _output({"status": "updated"}, json_output)
 
