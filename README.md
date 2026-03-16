@@ -68,11 +68,19 @@ $ timecard start
 status: started
 started_at: 2025-01-15T09:00:00+00:00
 
+$ timecard pause
+status: paused
+paused_at: 2025-01-15T10:30:00+00:00
+
+$ timecard resume
+status: resumed
+resumed_at: 2025-01-15T11:00:00+00:00
+
 $ timecard stop
 status: stopped
 entry_id: 1
-duration_minutes: 180.5
-hours: 3.01
+duration_minutes: 150.5
+hours: 2.51
 
 $ timecard status
 running: False
