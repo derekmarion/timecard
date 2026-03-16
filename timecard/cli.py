@@ -406,6 +406,36 @@ def setup() -> None:
 
 
 @app.command()
+def update(
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Update TimeCard to the latest version from GitHub."""
+    import subprocess
+
+    _REPO_URL = "git+https://github.com/derekmarion/timecard.git"
+
+    if not json_output:
+        typer.echo("Clearing uv cache...")
+    result = subprocess.run(["uv", "cache", "clean", "timecard"], capture_output=True, text=True)
+    if result.returncode != 0:
+        _output({"error": f"Failed to clear cache: {result.stderr.strip()}"}, json_output)
+        raise typer.Exit(code=2)
+
+    if not json_output:
+        typer.echo("Installing latest TimeCard from GitHub...")
+    result = subprocess.run(
+        ["uv", "tool", "install", "--force", _REPO_URL],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        _output({"error": f"Failed to install: {result.stderr.strip()}"}, json_output)
+        raise typer.Exit(code=2)
+
+    _output({"status": "updated"}, json_output)
+
+
+@app.command()
 def mcp() -> None:
     """Start the MCP server for agent integration."""
     from timecard.mcp_server import run_server

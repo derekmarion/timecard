@@ -7,9 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- `timecard update` command — clears uv cache and reinstalls from GitHub; works from any directory
 - `timecard setup` interactive wizard — prompts for contractor/client info and writes `~/.config/timecard/.env`
 - Config file now defaults to `~/.config/timecard/.env` (XDG Base Directory spec)
 - Database now defaults to `~/.local/share/timecard/timecard.db` (XDG Base Directory spec)
+
+### Changed
+- Install scripts now install from the GitHub git URL instead of requiring a local clone
 
 ## [1.1.0] - 2026-03-04
 
