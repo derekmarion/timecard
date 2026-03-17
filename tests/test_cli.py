@@ -276,6 +276,7 @@ class TestSetup:
             "150",
             "~/invoices",
             "Please pay within 30 days.",
+            "0",
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -284,6 +285,7 @@ class TestSetup:
         assert 'CONTRACTOR_NAME="Jane Smith"' in content
         assert 'CLIENT_NAME="Acme Corp"' in content
         assert "HOURLY_RATE=150" in content
+        assert "INVOICE_NUMBER_START=0" in content
 
     def test_setup_aborts_if_exists_and_no_overwrite(self, tmp_path, monkeypatch):
         config_path = tmp_path / ".env"
@@ -317,6 +319,7 @@ class TestSetup:
             "200", # update hourly rate
             "",    # invoice output dir
             "",    # payment instructions
+            "",    # invoice number offset
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -331,7 +334,7 @@ class TestSetup:
 
         inputs = "\n".join([
             'O\'Brien & "Co"',  # name with embedded double quotes
-            "", "", "", "", "100", "~/invoices", "Pay.",
+            "", "", "", "", "100", "~/invoices", "Pay.", "0",
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0

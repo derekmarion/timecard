@@ -389,6 +389,11 @@ def setup() -> None:
         "Payment instructions",
         default=file_vals.get("PAYMENT_INSTRUCTIONS", "Please remit payment within 30 days."),
     )
+    invoice_number_start: int = typer.prompt(
+        "Invoice number offset (0 = start from INV-0001)",
+        default=int(file_vals.get("INVOICE_NUMBER_START", "0")),
+        type=int,
+    )
 
     lines = [
         f"CONTRACTOR_NAME={_quote(contractor_name)}",
@@ -399,6 +404,7 @@ def setup() -> None:
         f"HOURLY_RATE={hourly_rate}",
         f"INVOICE_OUTPUT_DIR={_quote(invoice_output_dir)}",
         f"PAYMENT_INSTRUCTIONS={_quote(payment_instructions)}",
+        f"INVOICE_NUMBER_START={invoice_number_start}",
     ]
 
     config_path.parent.mkdir(parents=True, exist_ok=True)
