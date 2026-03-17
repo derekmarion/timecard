@@ -20,6 +20,11 @@
 - [x] Configurable invoice number start offset via `INVOICE_NUMBER_START` in `.env` — for users migrating from a prior invoicing system
 - [x] `--number` flag on `timecard invoice` to override the auto-incremented number for a single invocation
 
+## v1.3 — Invoice Lifecycle
+- [ ] `timecard invoice paid <invoice-number>` command to mark an invoice as paid, recording the payment date
+- [ ] `--paid` / `--unpaid` filter flags on `timecard invoice list` to view outstanding or settled invoices
+- [ ] Python version check in `install.sh` / `install.ps1` — fail with a clear message if the system Python is below the minimum required version, and optionally guide users to install a compatible version
+
 ## v2.0 — Multi-Client Support
 - [ ] Multiple clients with per-client rates
 - [ ] Client management commands (`timecard client add/list/edit`)
