@@ -389,11 +389,19 @@ def setup() -> None:
         "Payment instructions",
         default=file_vals.get("PAYMENT_INSTRUCTIONS", "Please remit payment within 30 days."),
     )
-    invoice_number_start: int = typer.prompt(
-        "Invoice number offset (0 = start from INV-0001)",
-        default=int(file_vals.get("INVOICE_NUMBER_START", "0")),
-        type=int,
-    )
+    try:
+        _inv_start_default = int(file_vals.get("INVOICE_NUMBER_START") or "0")
+    except ValueError:
+        _inv_start_default = 0
+    while True:
+        invoice_number_start: int = typer.prompt(
+            "Invoice number offset (0 = start from INV-0001)",
+            default=_inv_start_default,
+            type=int,
+        )
+        if invoice_number_start >= 0:
+            break
+        typer.echo("Invoice number offset must be 0 or greater.")
 
     lines = [
         f"CONTRACTOR_NAME={_quote(contractor_name)}",

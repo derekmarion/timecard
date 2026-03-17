@@ -328,6 +328,34 @@ class TestSetup:
         assert 'CLIENT_NAME="Acme"' in content
         assert "HOURLY_RATE=200" in content
 
+    def test_setup_rejects_negative_invoice_number_offset(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".env"
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
+
+        inputs = "\n".join([
+            "", "", "", "", "", "150", "~/invoices", "Pay.",
+            "-1",  # rejected
+            "5",   # accepted
+        ])
+        result = runner.invoke(app, ["setup"], input=inputs + "\n")
+        assert result.exit_code == 0
+        content = config_path.read_text()
+        assert "INVOICE_NUMBER_START=5" in content
+        assert "must be 0 or greater" in result.stdout
+
+    def test_setup_handles_invalid_invoice_offset_in_file(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".env"
+        config_path.write_text("INVOICE_NUMBER_START=\n")
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
+
+        inputs = "\n".join([
+            "y",   # confirm edit
+            "", "", "", "", "", "150", "~/invoices", "Pay.", "",
+        ])
+        result = runner.invoke(app, ["setup"], input=inputs + "\n")
+        assert result.exit_code == 0
+        assert "INVOICE_NUMBER_START=0" in config_path.read_text()
+
     def test_setup_escapes_quotes_in_values(self, tmp_path, monkeypatch):
         config_path = tmp_path / ".env"
         monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
