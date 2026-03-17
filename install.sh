@@ -5,11 +5,13 @@ set -euo pipefail
 
 echo "=== TimeCard Installer ==="
 
+# Ensure uv's bin dir (and uv tool binaries) are on PATH
+export PATH="$HOME/.local/bin:$PATH"
+
 # 1. Install uv if not present
 if ! command -v uv &>/dev/null; then
     echo "Installing uv..."
     curl -LsSf https://astral.sh/uv/install.sh | sh
-    export PATH="$HOME/.local/bin:$PATH"
 fi
 
 # 2. Install WeasyPrint system dependencies

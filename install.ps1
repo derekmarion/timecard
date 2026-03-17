@@ -4,11 +4,13 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "=== TimeCard Installer ==="
 
+# Ensure uv's bin dir (and uv tool binaries) are on Path
+$env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+
 # 1. Install uv if not present
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     Write-Host "Installing uv..."
     powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-    $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
 }
 
 # 2. WeasyPrint on Windows uses GTK3 runtime.

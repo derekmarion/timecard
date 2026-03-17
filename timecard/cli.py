@@ -439,13 +439,16 @@ def update(
     if not json_output:
         typer.echo("Refreshing shell completion...")
     try:
-        subprocess.run(
+        result = subprocess.run(
             ["timecard", "--install-completion"],
             capture_output=True,
             check=False,
         )
+        if result.returncode != 0 and not json_output:
+            typer.echo("Note: Could not refresh shell completion. Run 'timecard --install-completion' manually.")
     except FileNotFoundError:
-        pass  # timecard not on PATH yet; user can run manually
+        if not json_output:
+            typer.echo("Note: Could not refresh shell completion. Run 'timecard --install-completion' manually.")
 
     _output({"status": "updated"}, json_output)
 
