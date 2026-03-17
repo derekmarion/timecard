@@ -436,6 +436,20 @@ def update(
         typer.echo("Installing latest TimeCard from GitHub...")
     _run(["uv", "tool", "install", "--force", _REPO_URL], "Failed to install")
 
+    if not json_output:
+        typer.echo("Refreshing shell completion...")
+    try:
+        result = subprocess.run(
+            ["timecard", "--install-completion"],
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0 and not json_output:
+            typer.echo("Note: Could not refresh shell completion. Run 'timecard --install-completion' manually.")
+    except FileNotFoundError:
+        if not json_output:
+            typer.echo("Note: Could not refresh shell completion. Run 'timecard --install-completion' manually.")
+
     _output({"status": "updated"}, json_output)
 
 

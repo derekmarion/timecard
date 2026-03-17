@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- Shell completion auto-installed during `install.sh` (bash/zsh/fish) and `install.ps1` (PowerShell); also refreshed on `timecard update`
 - `timecard update` command — clears uv cache and reinstalls from GitHub; works from any directory
 - `timecard setup` interactive wizard — prompts for contractor/client info and writes `~/.config/timecard/.env`
 - Config file now defaults to `~/.config/timecard/.env` (XDG Base Directory spec)
