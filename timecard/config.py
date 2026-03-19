@@ -87,8 +87,7 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
 
     Args:
         env_path: Optional explicit path to .env file. If None, uses
-                  TIMECARD_CONFIG_PATH env var, then XDG config location,
-                  then .env in cwd.
+                  TIMECARD_CONFIG_PATH env var, then XDG config location.
 
     Returns:
         A populated Settings instance.
@@ -97,14 +96,9 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
         env_path = os.environ.get("TIMECARD_CONFIG_PATH")
 
     if env_path is None:
-        # Try XDG config location, then fall back to cwd .env
         xdg_config = DEFAULT_CONFIG_PATH.expanduser()
         if xdg_config.exists():
             env_path = str(xdg_config)
-        else:
-            cwd_env = Path.cwd() / ".env"
-            if cwd_env.exists():
-                env_path = str(cwd_env)
 
     # Read file values without modifying os.environ so env vars always win
     file_vals: dict[str, Optional[str]] = dotenv_values(env_path) if env_path else {}

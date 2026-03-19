@@ -277,6 +277,7 @@ class TestSetup:
             "~/invoices",
             "Please pay within 30 days.",
             "0",
+            "",  # Google Sheet ID (skip)
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -320,6 +321,7 @@ class TestSetup:
             "",    # invoice output dir
             "",    # payment instructions
             "",    # invoice number offset
+            "",    # Google Sheet ID (skip)
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -336,6 +338,7 @@ class TestSetup:
             "", "", "", "", "", "150", "~/invoices", "Pay.",
             "-1",  # rejected
             "5",   # accepted
+            "",    # Google Sheet ID (skip)
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -350,7 +353,7 @@ class TestSetup:
 
         inputs = "\n".join([
             "y",   # confirm edit
-            "", "", "", "", "", "150", "~/invoices", "Pay.", "",
+            "", "", "", "", "", "150", "~/invoices", "Pay.", "", "",
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -362,7 +365,7 @@ class TestSetup:
 
         inputs = "\n".join([
             'O\'Brien & "Co"',  # name with embedded double quotes
-            "", "", "", "", "100", "~/invoices", "Pay.", "0",
+            "", "", "", "", "100", "~/invoices", "Pay.", "0", "",
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0

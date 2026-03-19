@@ -403,6 +403,11 @@ def setup() -> None:
             break
         typer.echo("Invoice number offset must be 0 or greater.")
 
+    google_sheet_id = typer.prompt(
+        "Google Sheet ID for sync (leave blank to skip)",
+        default=file_vals.get("GOOGLE_SHEET_ID", ""),
+    ).strip()
+
     lines = [
         f"CONTRACTOR_NAME={_quote(contractor_name)}",
         f"CONTRACTOR_ADDRESS={_quote(contractor_address)}",
@@ -414,6 +419,8 @@ def setup() -> None:
         f"PAYMENT_INSTRUCTIONS={_quote(payment_instructions)}",
         f"INVOICE_NUMBER_START={invoice_number_start}",
     ]
+    if google_sheet_id:
+        lines.append(f"GOOGLE_SHEET_ID={_quote(google_sheet_id)}")
 
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text("\n".join(lines) + "\n")
