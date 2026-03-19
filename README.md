@@ -170,7 +170,7 @@ To start invoice numbering at a specific offset (e.g. when migrating from a prio
 
 ### JSON output
 
-All commands support `--json` for machine-readable output:
+All commands except `export` support `--json` for machine-readable output (`export` always outputs CSV):
 
 ```bash
 $ timecard status --json
@@ -200,6 +200,8 @@ TimeCard stores all data in a single SQLite file. To share it across machines, s
 
 ```bash
 # In ~/.config/timecard/.env
-TIMECARD_DB_PATH=~/Google Drive/My Drive/timecard/timecard.db
+TIMECARD_DB_PATH="~/Google Drive/My Drive/timecard/timecard.db"
 ```
+
+> **Note:** Avoid running TimeCard on two machines simultaneously against the same database file. SQLite is not designed for concurrent multi-writer access, and file sync tools that hold files open during sync can cause locking conflicts. As long as only one machine is active at a time this approach is reliable.
 

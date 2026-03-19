@@ -6,7 +6,7 @@
 - PDF invoice generation with calendar-aligned billing periods
 - CSV export for data portability
 - MCP server for AI agent integration
-- JSON output mode on all commands
+- JSON output mode on all commands (except `export`, which outputs CSV)
 - Cross-platform install scripts
 
 ## v1.1 — Quality of Life

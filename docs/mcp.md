@@ -37,7 +37,6 @@ This starts a stdio-based MCP server. Configure it in your agent client (e.g., C
 | `edit_entry` | `id: int`, `hours?: float`, `note?: str` | Update an existing entry |
 | `delete_entry_tool` | `id: int` | Delete an entry |
 | `generate_invoice` | `period?: str`, `note?: str` | Generate a PDF invoice |
-| `sync_to_sheets` | *(none)* | Push all entries to Google Sheets |
 
 ## Example Agent Interaction
 
