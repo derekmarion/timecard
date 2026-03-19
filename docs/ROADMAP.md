@@ -21,6 +21,7 @@
 - [x] `--number` flag on `timecard invoice` to override the auto-incremented number for a single invocation
 
 ## v1.3 — Invoice Lifecycle
+- [ ] `timecard invoice list` command to view past invoices (number, date, total hours, amount, PDF path)
 - [ ] `timecard invoice paid <invoice-number>` command to mark an invoice as paid, recording the payment date
 - [ ] `--paid` / `--unpaid` filter flags on `timecard invoice list` to view outstanding or settled invoices
 - [ ] Python version check in `install.sh` / `install.ps1` — fail with a clear message if the system Python is below the minimum required version, and optionally guide users to install a compatible version
