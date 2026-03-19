@@ -47,22 +47,37 @@ Clears the uv cache for TimeCard and reinstalls the latest version from GitHub. 
 
 ## Configuration
 
-Create a `.env` file in your working directory or set environment variables:
+Run the interactive setup wizard to configure TimeCard:
+
+```bash
+timecard setup
+```
+
+This creates a config file at `~/.config/timecard/.env` (or the path set by `TIMECARD_CONFIG_PATH`).
+
+### Settings managed by `timecard setup`
 
 | Variable | Description | Example |
 |---|---|---|
-| `HOURLY_RATE` | Billing rate per hour | `150` |
 | `CONTRACTOR_NAME` | Your name | `Jane Smith` |
 | `CONTRACTOR_ADDRESS` | Your address | `456 Elm St, Portland, OR` |
 | `CONTRACTOR_EMAIL` | Your email | `jane@example.com` |
 | `CLIENT_NAME` | Client's name | `Acme Corp` |
 | `CLIENT_ADDRESS` | Client's address | `123 Main St, Springfield` |
+| `HOURLY_RATE` | Billing rate per hour | `150` |
 | `INVOICE_OUTPUT_DIR` | Where to save PDFs | `~/invoices` |
 | `PAYMENT_INSTRUCTIONS` | Text on invoices | `Please remit payment via ACH within 30 days.` |
-| `GOOGLE_SHEET_ID` | Google Sheet ID for sync (optional) | `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74Og...` |
-| `TIMECARD_DB_PATH` | Override database location | `~/.timecard/timecard.db` |
-| `TIMECARD_CONFIG_PATH` | Override .env file location | `/path/to/.env` |
 | `INVOICE_NUMBER_START` | Offset added to auto-incremented invoice numbers (for migrating from a prior system) | `100` → first invoice is `INV-0101` |
+| `GOOGLE_SHEET_ID` | Google Sheet ID for sync (optional) | `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74Og...` |
+
+### Advanced overrides (environment variables only)
+
+These have sensible XDG-compliant defaults and do not need to be set for most users:
+
+| Variable | Description | Default |
+|---|---|---|
+| `TIMECARD_CONFIG_PATH` | Override config file location | `~/.config/timecard/.env` |
+| `TIMECARD_DB_PATH` | Override database location | `~/.local/share/timecard/timecard.db` |
 
 > **Security note:** Do not include bank account or routing numbers in your config or invoice templates. Provide banking details to your client once via their secure vendor onboarding process.
 
@@ -194,6 +209,6 @@ See [docs/mcp.md](docs/mcp.md) for the full list of exposed tools.
 1. Create a project in the [Google Cloud Console](https://console.cloud.google.com/)
 2. Enable the Google Sheets API
 3. Create OAuth 2.0 credentials (Desktop application type)
-4. Download the client secrets JSON and save it to `~/.timecard/client_secrets.json`
+4. Download the client secrets JSON and save it to `~/.config/timecard/client_secrets.json`
 5. Run `timecard auth` — this opens a browser for OAuth consent
 6. The tool requests read/write access to Google Sheets only

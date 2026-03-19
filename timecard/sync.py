@@ -1,6 +1,7 @@
 """Google Sheets sync for TimeCard — pushes time entries to a configured spreadsheet."""
 
 import json
+import os
 import sqlite3
 from pathlib import Path
 from typing import Optional
@@ -14,7 +15,7 @@ from timecard.db import get_entries
 
 # Scopes required for reading/writing Google Sheets
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-CREDENTIALS_DIR = Path.home() / ".timecard"
+CREDENTIALS_DIR = (Path(os.environ.get("XDG_CONFIG_HOME") or "~/.config") / "timecard").expanduser()
 TOKEN_PATH = CREDENTIALS_DIR / "google_token.json"
 CLIENT_SECRETS_PATH = CREDENTIALS_DIR / "client_secrets.json"
 
@@ -23,7 +24,8 @@ def authenticate() -> Credentials:
     """Run the Google OAuth flow and save credentials locally.
 
     Launches a local browser-based OAuth consent screen. The user grants
-    Sheets access, and the resulting token is saved to ~/.timecard/google_token.json.
+    Sheets access, and the resulting token is saved to
+    $XDG_CONFIG_HOME/timecard/google_token.json (defaults to ~/.config/timecard/).
 
     Returns:
         Authorized Google OAuth2 Credentials.

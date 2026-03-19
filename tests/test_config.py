@@ -66,20 +66,6 @@ class TestLoadSettings:
         assert settings.db_path == str(tmp_path / "custom.db")
         monkeypatch.delenv("TIMECARD_DB_PATH", raising=False)
 
-    def test_load_from_cwd_env_file(self, tmp_path, monkeypatch):
-        env_file = tmp_path / ".env"
-        env_file.write_text("HOURLY_RATE=175\n")
-        for key in ["HOURLY_RATE", "TIMECARD_CONFIG_PATH"]:
-            monkeypatch.delenv(key, raising=False)
-
-        # Ensure XDG config doesn't exist so we fall through to the cwd fallback
-        monkeypatch.setattr("timecard.config.DEFAULT_CONFIG_PATH", tmp_path / "no-xdg.env")
-        with patch("timecard.config.Path.cwd", return_value=tmp_path):
-            settings = load_settings()
-        assert settings.hourly_rate == 175.0
-
-        monkeypatch.delenv("HOURLY_RATE", raising=False)
-
     def test_empty_google_sheet_id_is_none(self, tmp_path, monkeypatch):
         monkeypatch.setenv("GOOGLE_SHEET_ID", "")
         settings = load_settings(str(tmp_path / "nonexistent.env"))
