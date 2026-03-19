@@ -30,7 +30,6 @@ class Settings:
         client_address: Address of the client.
         invoice_output_dir: Directory to write generated PDFs.
         payment_instructions: Payment instructions included on invoices.
-        google_sheet_id: Optional Google Sheet ID for sync.
         db_path: Path to the SQLite database file.
         invoice_number_start: Offset added to the sequential invoice counter.
                               Set via INVOICE_NUMBER_START for users migrating
@@ -46,7 +45,6 @@ class Settings:
     client_address: str = ""
     invoice_output_dir: str = "~/invoices"
     payment_instructions: str = "Please remit payment within 30 days."
-    google_sheet_id: Optional[str] = None
     db_path: str = str(DEFAULT_DB_PATH)
     invoice_number_start: int = 0
 
@@ -122,7 +120,6 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
         payment_instructions=_get(
             "PAYMENT_INSTRUCTIONS", "Please remit payment within 30 days."
         ),
-        google_sheet_id=_get("GOOGLE_SHEET_ID") or None,
         db_path=_get("TIMECARD_DB_PATH", str(DEFAULT_DB_PATH)),
         invoice_number_start=int(_get("INVOICE_NUMBER_START", "0")),
     )

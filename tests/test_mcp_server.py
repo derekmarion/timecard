@@ -151,9 +151,3 @@ class TestGenerateInvoice:
         assert "pdf_path" in result
 
 
-class TestSyncToSheets:
-    def test_no_sheet_id_raises(self, mock_conn):
-        from timecard.mcp_server import sync_to_sheets
-
-        with pytest.raises(ValueError, match="Google Sheet ID not configured"):
-            sync_to_sheets()

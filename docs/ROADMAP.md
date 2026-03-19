@@ -4,7 +4,7 @@
 - Timer-based and manual time entry
 - Entry management (log, edit, delete)
 - PDF invoice generation with calendar-aligned billing periods
-- Google Sheets sync (requires user-managed OAuth setup)
+- CSV export for data portability
 - MCP server for AI agent integration
 - JSON output mode on all commands
 - Cross-platform install scripts
@@ -27,8 +27,7 @@
 - [ ] Python version check in `install.sh` / `install.ps1` — fail with a clear message if the system Python is below the minimum required version, and optionally guide users to install a compatible version
 
 ## v1.4 — Multi-Machine Support
-- [ ] Refactor `timecard sync` into `timecard sync push` / `timecard sync pull` subcommands — push sends local entries to the sheet, pull imports from the sheet back to the local database, enabling use across multiple machines
-- [ ] Extend sync to cover the invoices table in addition to time entries, so full history is preserved across machines
+- [x] Document `TIMECARD_DB_PATH` as the recommended approach for sharing data across machines via a synced folder (Google Drive, Proton Drive, Syncthing, etc.)
 
 ## v2.0 — Multi-Client Support
 - [ ] Multiple clients with per-client rates
@@ -44,9 +43,6 @@
 - [ ] Publish to PyPI (`pip install timecard` / `uv tool install timecard`)
 - [ ] Homebrew formula for Mac users
 - [ ] Automated invoice emailing (SMTP or SendGrid integration)
-
-## Future
-- [ ] Pre-configured OAuth client for seamless Google Sheets auth (pending Google verification)
 
 ---
 
