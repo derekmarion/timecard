@@ -28,6 +28,7 @@
 
 ## v1.4 — Multi-Machine Support
 - [ ] Refactor `timecard sync` into `timecard sync push` / `timecard sync pull` subcommands — push sends local entries to the sheet, pull imports from the sheet back to the local database, enabling use across multiple machines
+- [ ] Extend sync to cover the invoices table in addition to time entries, so full history is preserved across machines
 
 ## v2.0 — Multi-Client Support
 - [ ] Multiple clients with per-client rates
