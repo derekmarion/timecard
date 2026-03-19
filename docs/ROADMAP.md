@@ -25,6 +25,9 @@
 - [ ] `--paid` / `--unpaid` filter flags on `timecard invoice list` to view outstanding or settled invoices
 - [ ] Python version check in `install.sh` / `install.ps1` — fail with a clear message if the system Python is below the minimum required version, and optionally guide users to install a compatible version
 
+## v1.4 — Multi-Machine Support
+- [ ] Refactor `timecard sync` into `timecard sync push` / `timecard sync pull` subcommands — push sends local entries to the sheet, pull imports from the sheet back to the local database, enabling use across multiple machines
+
 ## v2.0 — Multi-Client Support
 - [ ] Multiple clients with per-client rates
 - [ ] Client management commands (`timecard client add/list/edit`)
