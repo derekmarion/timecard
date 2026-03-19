@@ -15,7 +15,7 @@ from timecard.db import get_entries
 
 # Scopes required for reading/writing Google Sheets
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-CREDENTIALS_DIR = (Path(os.environ.get("XDG_CONFIG_HOME", "~/.config")) / "timecard").expanduser()
+CREDENTIALS_DIR = (Path(os.environ.get("XDG_CONFIG_HOME") or "~/.config") / "timecard").expanduser()
 TOKEN_PATH = CREDENTIALS_DIR / "google_token.json"
 CLIENT_SECRETS_PATH = CREDENTIALS_DIR / "client_secrets.json"
 

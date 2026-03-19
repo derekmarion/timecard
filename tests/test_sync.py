@@ -1,5 +1,6 @@
 """Tests for timecard.sync — Google Sheets integration with mocked API calls."""
 
+import importlib
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -18,6 +19,31 @@ def conn(tmp_path):
 @pytest.fixture
 def settings():
     return Settings(google_sheet_id="test-sheet-id")
+
+
+class TestCredentialPaths:
+    def test_default_credential_dir(self, monkeypatch):
+        monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+        import timecard.sync as sync_module
+        importlib.reload(sync_module)
+        assert str(sync_module.CREDENTIALS_DIR).endswith("/.config/timecard")
+        importlib.reload(sync_module)
+
+    def test_xdg_config_home_overrides_credential_dir(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+        import timecard.sync as sync_module
+        importlib.reload(sync_module)
+        assert sync_module.CREDENTIALS_DIR == tmp_path / "timecard"
+        assert sync_module.CLIENT_SECRETS_PATH == tmp_path / "timecard" / "client_secrets.json"
+        assert sync_module.TOKEN_PATH == tmp_path / "timecard" / "google_token.json"
+        importlib.reload(sync_module)
+
+    def test_empty_xdg_config_home_falls_back_to_default(self, monkeypatch):
+        monkeypatch.setenv("XDG_CONFIG_HOME", "")
+        import timecard.sync as sync_module
+        importlib.reload(sync_module)
+        assert str(sync_module.CREDENTIALS_DIR).endswith("/.config/timecard")
+        importlib.reload(sync_module)
 
 
 class TestSyncToSheets:
