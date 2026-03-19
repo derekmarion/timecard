@@ -1,16 +1,13 @@
 [project]
 name = "timecard"
 version = "1.0.0"
-description = "CLI tool for 1099 contractors to track billable hours, generate invoices, and sync to Google Sheets"
+description = "CLI tool for 1099 contractors to track billable hours, generate invoices, and export data"
 requires-python = ">=3.11"
 dependencies = [
     "typer>=0.9.0",
     "python-dotenv>=1.0.0",
     "jinja2>=3.1.0",
     "weasyprint>=60.0",
-    "gspread>=5.12.0",
-    "google-auth>=2.23.0",
-    "google-auth-oauthlib>=1.1.0",
     "mcp>=1.0.0",
 ]
 

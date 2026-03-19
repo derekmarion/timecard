@@ -308,41 +308,6 @@ def invoice(
     )
 
 
-@app.command()
-def sync(
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-) -> None:
-    """Sync time entries to Google Sheets."""
-    from timecard.sync import sync_to_sheets
-
-    conn = _get_conn()
-    settings = load_settings()
-
-    try:
-        count = sync_to_sheets(conn, settings)
-    except (ValueError, FileNotFoundError) as e:
-        _output({"error": str(e)}, json_output)
-        raise typer.Exit(code=2)
-
-    _output({"status": "synced", "entries_synced": count}, json_output)
-
-
-@app.command()
-def auth(
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
-) -> None:
-    """Run Google OAuth flow to authorize Sheets access."""
-    from timecard.sync import authenticate
-
-    try:
-        authenticate()
-    except FileNotFoundError as e:
-        _output({"error": str(e)}, json_output)
-        raise typer.Exit(code=2)
-
-    _output({"status": "authenticated"}, json_output)
-
-
 def _quote(value: str) -> str:
     """Escape and double-quote a value for writing to a .env file."""
     escaped = value.replace("\\", "\\\\").replace('"', '\\"')
@@ -403,11 +368,6 @@ def setup() -> None:
             break
         typer.echo("Invoice number offset must be 0 or greater.")
 
-    google_sheet_id = typer.prompt(
-        "Google Sheet ID for sync (leave blank to skip)",
-        default=file_vals.get("GOOGLE_SHEET_ID", ""),
-    ).strip()
-
     lines = [
         f"CONTRACTOR_NAME={_quote(contractor_name)}",
         f"CONTRACTOR_ADDRESS={_quote(contractor_address)}",
@@ -419,8 +379,6 @@ def setup() -> None:
         f"PAYMENT_INSTRUCTIONS={_quote(payment_instructions)}",
         f"INVOICE_NUMBER_START={invoice_number_start}",
     ]
-    if google_sheet_id:
-        lines.append(f"GOOGLE_SHEET_ID={_quote(google_sheet_id)}")
 
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text("\n".join(lines) + "\n")

@@ -1,6 +1,6 @@
 # TimeCard
 
-A Python CLI tool for 1099 contractors to track billable hours, manage time entries, generate PDF invoices, and optionally back up data to Google Sheets. Designed to be AI-native and agent-callable via both a CLI and an MCP server.
+A Python CLI tool for 1099 contractors to track billable hours, manage time entries, and generate PDF invoices. Designed to be AI-native and agent-callable via both a CLI and an MCP server.
 
 ## Prerequisites
 
@@ -68,7 +68,6 @@ This creates a config file at `~/.config/timecard/.env` (or the path set by `TIM
 | `INVOICE_OUTPUT_DIR` | Where to save PDFs | `~/invoices` |
 | `PAYMENT_INSTRUCTIONS` | Text on invoices | `Please remit payment via ACH within 30 days.` |
 | `INVOICE_NUMBER_START` | Offset added to auto-incremented invoice numbers (for migrating from a prior system) | `100` → first invoice is `INV-0101` |
-| `GOOGLE_SHEET_ID` | Google Sheet ID for sync (optional) | `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74Og...` |
 
 ### Advanced overrides (environment variables only)
 
@@ -169,18 +168,9 @@ When no `--period` is specified, all uninvoiced entries are included. Period opt
 
 To start invoice numbering at a specific offset (e.g. when migrating from a prior system), set `INVOICE_NUMBER_START` in your `.env`. With `INVOICE_NUMBER_START=100`, the first invoice will be `INV-0101`.
 
-### Sync to Google Sheets
-
-```bash
-$ timecard auth    # one-time OAuth setup
-$ timecard sync
-status: synced
-entries_synced: 5
-```
-
 ### JSON output
 
-All commands support `--json` for machine-readable output:
+All commands except `export` support `--json` for machine-readable output (`export` always outputs CSV):
 
 ```bash
 $ timecard status --json
@@ -204,11 +194,14 @@ TimeCard exposes an MCP server for AI agent integration. Add it to your `claude_
 
 See [docs/mcp.md](docs/mcp.md) for the full list of exposed tools.
 
-## Google Sheets Setup
+## Multi-Machine Use
 
-1. Create a project in the [Google Cloud Console](https://console.cloud.google.com/)
-2. Enable the Google Sheets API
-3. Create OAuth 2.0 credentials (Desktop application type)
-4. Download the client secrets JSON and save it to `~/.config/timecard/client_secrets.json`
-5. Run `timecard auth` — this opens a browser for OAuth consent
-6. The tool requests read/write access to Google Sheets only
+TimeCard stores all data in a single SQLite file. To share it across machines, set `TIMECARD_DB_PATH` to a location that is accessible from each machine — a synced folder (Google Drive, Proton Drive, Dropbox, Syncthing, etc.) or a network share both work well:
+
+```bash
+# In ~/.config/timecard/.env
+TIMECARD_DB_PATH="~/Google Drive/My Drive/timecard/timecard.db"
+```
+
+> **Note:** Avoid running TimeCard on two machines simultaneously against the same database file. SQLite is not designed for concurrent multi-writer access, and file sync tools that hold files open during sync can cause locking conflicts. As long as only one machine is active at a time this approach is reliable.
+

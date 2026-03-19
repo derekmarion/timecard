@@ -237,21 +237,6 @@ def generate_invoice(
     }
 
 
-@mcp.tool()
-def sync_to_sheets() -> dict:
-    """Push all time entries to the configured Google Sheet.
-
-    Returns:
-        Dict with 'status' and 'entries_synced' count.
-    """
-    from timecard.sync import sync_to_sheets as _sync
-
-    conn = _get_conn()
-    settings = load_settings()
-    count = _sync(conn, settings)
-    return {"status": "synced", "entries_synced": count}
-
-
 def run_server() -> None:
     """Start the MCP server on stdio transport."""
     mcp.run(transport="stdio")

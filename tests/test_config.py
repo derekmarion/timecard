@@ -37,19 +37,18 @@ class TestLoadSettings:
     def test_load_from_env_file(self, tmp_path):
         env_file = tmp_path / ".env"
         env_file.write_text(
-            'HOURLY_RATE=200\nCONTRACTOR_NAME="Test User"\nGOOGLE_SHEET_ID=abc123\n'
+            'HOURLY_RATE=200\nCONTRACTOR_NAME="Test User"\n'
         )
         # Clear any existing env vars that might interfere
-        for key in ["HOURLY_RATE", "CONTRACTOR_NAME", "GOOGLE_SHEET_ID"]:
+        for key in ["HOURLY_RATE", "CONTRACTOR_NAME"]:
             os.environ.pop(key, None)
 
         settings = load_settings(str(env_file))
         assert settings.hourly_rate == 200.0
         assert settings.contractor_name == "Test User"
-        assert settings.google_sheet_id == "abc123"
 
         # Clean up env vars set by dotenv
-        for key in ["HOURLY_RATE", "CONTRACTOR_NAME", "GOOGLE_SHEET_ID"]:
+        for key in ["HOURLY_RATE", "CONTRACTOR_NAME"]:
             os.environ.pop(key, None)
 
     def test_env_var_override(self, tmp_path, monkeypatch):
@@ -65,12 +64,6 @@ class TestLoadSettings:
         settings = load_settings(str(tmp_path / "nonexistent.env"))
         assert settings.db_path == str(tmp_path / "custom.db")
         monkeypatch.delenv("TIMECARD_DB_PATH", raising=False)
-
-    def test_empty_google_sheet_id_is_none(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("GOOGLE_SHEET_ID", "")
-        settings = load_settings(str(tmp_path / "nonexistent.env"))
-        assert settings.google_sheet_id is None
-        monkeypatch.delenv("GOOGLE_SHEET_ID", raising=False)
 
     def test_empty_env_var_wins_over_file_value(self, tmp_path, monkeypatch):
         env_file = tmp_path / ".env"

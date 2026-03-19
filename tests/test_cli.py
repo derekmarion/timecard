@@ -247,21 +247,6 @@ class TestInvoice:
         assert data["invoice_number"] == "INV-0042"
 
 
-class TestSync:
-    def test_sync_no_sheet_id_errors(self, tmp_db):
-        result = runner.invoke(app, ["sync", "--json"])
-        assert result.exit_code == 2
-        data = json.loads(result.stdout)
-        assert "error" in data
-
-
-class TestAuth:
-    @patch("timecard.sync.authenticate", side_effect=FileNotFoundError("No secrets"))
-    def test_auth_no_secrets_errors(self, mock_auth, tmp_db):
-        result = runner.invoke(app, ["auth", "--json"])
-        assert result.exit_code == 2
-
-
 class TestSetup:
     def test_setup_creates_config(self, tmp_path, monkeypatch):
         config_path = tmp_path / ".config" / "timecard" / ".env"
@@ -277,7 +262,6 @@ class TestSetup:
             "~/invoices",
             "Please pay within 30 days.",
             "0",
-            "",  # Google Sheet ID (skip)
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -321,7 +305,6 @@ class TestSetup:
             "",    # invoice output dir
             "",    # payment instructions
             "",    # invoice number offset
-            "",    # Google Sheet ID (skip)
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -338,7 +321,6 @@ class TestSetup:
             "", "", "", "", "", "150", "~/invoices", "Pay.",
             "-1",  # rejected
             "5",   # accepted
-            "",    # Google Sheet ID (skip)
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -353,7 +335,7 @@ class TestSetup:
 
         inputs = "\n".join([
             "y",   # confirm edit
-            "", "", "", "", "", "150", "~/invoices", "Pay.", "", "",
+            "", "", "", "", "", "150", "~/invoices", "Pay.", "",
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -365,7 +347,7 @@ class TestSetup:
 
         inputs = "\n".join([
             'O\'Brien & "Co"',  # name with embedded double quotes
-            "", "", "", "", "100", "~/invoices", "Pay.", "0", "",
+            "", "", "", "", "100", "~/invoices", "Pay.", "0",
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
