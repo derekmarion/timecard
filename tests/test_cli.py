@@ -1,13 +1,14 @@
 """Tests for timecard.cli — Typer CLI commands via CliRunner."""
 
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
 
-from timecard.cli import app
+from timecard.cli import _format_ts, app
 from timecard.config import Settings
 from timecard.db import add_entry, get_connection, get_entry
 from timecard.models import Entry
@@ -421,3 +422,73 @@ class TestUpdate:
         data = json.loads(result.stdout)
         assert "error" in data
         assert "uv not found" in data["error"]
+
+
+class TestTimestampFormatting:
+    """Tests for human-readable timestamp formatting in CLI text output."""
+
+    _ISO_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
+
+    def test_format_ts_returns_readable_string(self):
+        iso = "2026-03-24T15:30:00+00:00"
+        result = _format_ts(iso)
+        assert not self._ISO_PATTERN.search(result)
+        assert "Mar" in result
+        assert "2026" in result
+
+    def test_format_ts_preserves_time(self):
+        iso = "2026-03-24T15:30:00+00:00"
+        result = _format_ts(iso)
+        assert "AM" in result or "PM" in result
+
+    def test_start_text_output_is_formatted(self, tmp_db):
+        result = runner.invoke(app, ["start"])
+        assert result.exit_code == 0
+        assert not self._ISO_PATTERN.search(result.stdout)
+
+    def test_start_json_output_preserves_iso(self, tmp_db):
+        result = runner.invoke(app, ["start", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert self._ISO_PATTERN.search(data["started_at"])
+
+    def test_pause_text_output_is_formatted(self, tmp_db):
+        runner.invoke(app, ["start"])
+        result = runner.invoke(app, ["pause"])
+        assert result.exit_code == 0
+        assert not self._ISO_PATTERN.search(result.stdout)
+
+    def test_pause_json_output_preserves_iso(self, tmp_db):
+        runner.invoke(app, ["start"])
+        result = runner.invoke(app, ["pause", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert self._ISO_PATTERN.search(data["paused_at"])
+
+    def test_resume_text_output_is_formatted(self, tmp_db):
+        runner.invoke(app, ["start"])
+        runner.invoke(app, ["pause"])
+        result = runner.invoke(app, ["resume"])
+        assert result.exit_code == 0
+        assert not self._ISO_PATTERN.search(result.stdout)
+
+    def test_resume_json_output_preserves_iso(self, tmp_db):
+        runner.invoke(app, ["start"])
+        runner.invoke(app, ["pause"])
+        result = runner.invoke(app, ["resume", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert self._ISO_PATTERN.search(data["resumed_at"])
+
+    def test_status_text_output_is_formatted(self, tmp_db):
+        runner.invoke(app, ["start"])
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 0
+        assert not self._ISO_PATTERN.search(result.stdout)
+
+    def test_status_json_output_preserves_iso(self, tmp_db):
+        runner.invoke(app, ["start"])
+        result = runner.invoke(app, ["status", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert self._ISO_PATTERN.search(data["started_at"])
