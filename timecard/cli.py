@@ -34,6 +34,12 @@ def _get_conn():
         raise typer.Exit(code=2)
 
 
+def _format_ts(iso_str: str) -> str:
+    """Format an ISO 8601 UTC timestamp in the system's local timezone."""
+    dt = datetime.fromisoformat(iso_str).astimezone()
+    return dt.strftime("%b %d, %Y %-I:%M %p %Z")
+
+
 def _output(data: dict, as_json: bool) -> None:
     """Print output as JSON or human-readable text.
 
@@ -62,7 +68,7 @@ def start(
         _output({"error": str(e)}, json_output)
         raise typer.Exit(code=1)
 
-    _output({"status": "started", "started_at": started_at}, json_output)
+    _output({"status": "started", "started_at": started_at if json_output else _format_ts(started_at)}, json_output)
 
 
 @app.command()
@@ -104,7 +110,7 @@ def pause(
         _output({"error": str(e)}, json_output)
         raise typer.Exit(code=1)
 
-    _output({"status": "paused", "paused_at": paused_at}, json_output)
+    _output({"status": "paused", "paused_at": paused_at if json_output else _format_ts(paused_at)}, json_output)
 
 
 @app.command()
@@ -121,7 +127,7 @@ def resume(
         _output({"error": str(e)}, json_output)
         raise typer.Exit(code=1)
 
-    _output({"status": "resumed", "resumed_at": resumed_at}, json_output)
+    _output({"status": "resumed", "resumed_at": resumed_at if json_output else _format_ts(resumed_at)}, json_output)
 
 
 @app.command()
@@ -133,6 +139,8 @@ def status(
 
     conn = _get_conn()
     result = get_timer_status(conn)
+    if not json_output and result.get("started_at"):
+        result = {**result, "started_at": _format_ts(result["started_at"])}
     _output(result, json_output)
 
 

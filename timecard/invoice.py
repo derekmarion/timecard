@@ -17,6 +17,11 @@ from timecard.db import (
 from timecard.models import Entry, Invoice
 
 
+def _format_date(date_str: str) -> str:
+    """Format a YYYY-MM-DD date string as 'Mar 24, 2026'."""
+    return datetime.strptime(date_str, "%Y-%m-%d").strftime("%b %d, %Y")
+
+
 def _get_period_dates(period: str) -> tuple[str, str]:
     """Calculate start and end dates for a calendar-aligned billing period.
 
@@ -208,14 +213,14 @@ def _render_invoice_html(
     for entry in entries:
         date_str = entry.started_at[:10] if entry.started_at else "N/A"
         line_items.append(
-            {"date": date_str, "note": entry.note, "hours": entry.hours()}
+            {"date": _format_date(date_str) if date_str != "N/A" else date_str, "note": entry.note, "hours": entry.hours()}
         )
 
     return template.render(
         invoice_number=invoice_number,
-        created_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-        period_start=period_start,
-        period_end=period_end,
+        created_date=datetime.now(timezone.utc).strftime("%b %d, %Y"),
+        period_start=_format_date(period_start),
+        period_end=_format_date(period_end),
         contractor_name=settings.contractor_name,
         contractor_address=settings.contractor_address,
         contractor_email=settings.contractor_email,
