@@ -1,13 +1,14 @@
 """Tests for timecard.cli — Typer CLI commands via CliRunner."""
 
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
 
-from timecard.cli import app
+from timecard.cli import _format_ts, app
 from timecard.config import Settings
 from timecard.db import add_entry, get_connection, get_entry
 from timecard.models import Entry
@@ -262,6 +263,7 @@ class TestSetup:
             "~/invoices",
             "Please pay within 30 days.",
             "0",
+            "12h",  # time format
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -295,16 +297,17 @@ class TestSetup:
 
         # Accept all defaults by pressing Enter, except hourly rate
         inputs = "\n".join([
-            "y",   # confirm edit
-            "",    # contractor name (keep "Jane Smith")
-            "",    # contractor address
-            "",    # contractor email
-            "",    # client name (keep "Acme")
-            "",    # client address
-            "200", # update hourly rate
-            "",    # invoice output dir
-            "",    # payment instructions
-            "",    # invoice number offset
+            "y",    # confirm edit
+            "",     # contractor name (keep "Jane Smith")
+            "",     # contractor address
+            "",     # contractor email
+            "",     # client name (keep "Acme")
+            "",     # client address
+            "200",  # update hourly rate
+            "",     # invoice output dir
+            "",     # payment instructions
+            "",     # invoice number offset
+            "",     # time format (keep default)
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -321,6 +324,7 @@ class TestSetup:
             "", "", "", "", "", "150", "~/invoices", "Pay.",
             "-1",  # rejected
             "5",   # accepted
+            "",    # time format (keep default)
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -335,7 +339,7 @@ class TestSetup:
 
         inputs = "\n".join([
             "y",   # confirm edit
-            "", "", "", "", "", "150", "~/invoices", "Pay.", "",
+            "", "", "", "", "", "150", "~/invoices", "Pay.", "", "",
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
@@ -347,12 +351,51 @@ class TestSetup:
 
         inputs = "\n".join([
             'O\'Brien & "Co"',  # name with embedded double quotes
-            "", "", "", "", "100", "~/invoices", "Pay.", "0",
+            "", "", "", "", "100", "~/invoices", "Pay.", "0", "",
         ])
         result = runner.invoke(app, ["setup"], input=inputs + "\n")
         assert result.exit_code == 0
         content = config_path.read_text()
         assert '\\"' in content  # double quotes are escaped
+
+    def test_setup_writes_time_format(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".env"
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
+
+        inputs = "\n".join([
+            "", "", "", "", "", "150", "~/invoices", "Pay.", "0", "", "24h",
+        ])
+        result = runner.invoke(app, ["setup"], input=inputs + "\n")
+        assert result.exit_code == 0
+        assert "TIME_FORMAT=24h" in config_path.read_text()
+
+    def test_setup_rejects_invalid_time_format(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".env"
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
+
+        inputs = "\n".join([
+            "", "", "", "", "", "150", "~/invoices", "Pay.", "0",
+            "bad",  # rejected
+            "12h",  # accepted
+        ])
+        result = runner.invoke(app, ["setup"], input=inputs + "\n")
+        assert result.exit_code == 0
+        assert "TIME_FORMAT=12h" in config_path.read_text()
+        assert "must be '12h' or '24h'" in result.stdout
+
+    def test_setup_preserves_existing_time_format(self, tmp_path, monkeypatch):
+        config_path = tmp_path / ".env"
+        config_path.write_text("TIME_FORMAT=24h\nHOURLY_RATE=100\n")
+        monkeypatch.setenv("TIMECARD_CONFIG_PATH", str(config_path))
+
+        # Accept all defaults — time format should default to "24h" from file
+        inputs = "\n".join([
+            "y",   # confirm edit
+            "", "", "", "", "", "", "", "", "", "", "",
+        ])
+        result = runner.invoke(app, ["setup"], input=inputs + "\n")
+        assert result.exit_code == 0
+        assert "TIME_FORMAT=24h" in config_path.read_text()
 
 
 class TestUpdate:
@@ -421,3 +464,96 @@ class TestUpdate:
         data = json.loads(result.stdout)
         assert "error" in data
         assert "uv not found" in data["error"]
+
+
+class TestTimestampFormatting:
+    """Tests for human-readable timestamp formatting in CLI text output."""
+
+    _ISO_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
+
+    def test_format_ts_returns_readable_string(self):
+        iso = "2026-03-24T15:30:00+00:00"
+        result = _format_ts(iso)
+        assert not self._ISO_PATTERN.search(result)
+        assert "Mar" in result
+        assert "2026" in result
+
+    def test_format_ts_preserves_time(self):
+        iso = "2026-03-24T15:30:00+00:00"
+        result = _format_ts(iso, "12h")
+        assert re.search(r"\b(AM|PM)\b", result)
+
+    def test_start_text_output_is_formatted(self, tmp_db):
+        result = runner.invoke(app, ["start"])
+        assert result.exit_code == 0
+        assert not self._ISO_PATTERN.search(result.stdout)
+
+    def test_start_json_output_preserves_iso(self, tmp_db):
+        result = runner.invoke(app, ["start", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert self._ISO_PATTERN.search(data["started_at"])
+
+    def test_pause_text_output_is_formatted(self, tmp_db):
+        runner.invoke(app, ["start"])
+        result = runner.invoke(app, ["pause"])
+        assert result.exit_code == 0
+        assert not self._ISO_PATTERN.search(result.stdout)
+
+    def test_pause_json_output_preserves_iso(self, tmp_db):
+        runner.invoke(app, ["start"])
+        result = runner.invoke(app, ["pause", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert self._ISO_PATTERN.search(data["paused_at"])
+
+    def test_resume_text_output_is_formatted(self, tmp_db):
+        runner.invoke(app, ["start"])
+        runner.invoke(app, ["pause"])
+        result = runner.invoke(app, ["resume"])
+        assert result.exit_code == 0
+        assert not self._ISO_PATTERN.search(result.stdout)
+
+    def test_resume_json_output_preserves_iso(self, tmp_db):
+        runner.invoke(app, ["start"])
+        runner.invoke(app, ["pause"])
+        result = runner.invoke(app, ["resume", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert self._ISO_PATTERN.search(data["resumed_at"])
+
+    def test_status_text_output_is_formatted(self, tmp_db):
+        runner.invoke(app, ["start"])
+        result = runner.invoke(app, ["status"])
+        assert result.exit_code == 0
+        assert not self._ISO_PATTERN.search(result.stdout)
+
+    def test_status_json_output_preserves_iso(self, tmp_db):
+        runner.invoke(app, ["start"])
+        result = runner.invoke(app, ["status", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert self._ISO_PATTERN.search(data["started_at"])
+
+    def test_format_ts_12h_contains_am_pm(self):
+        iso = "2026-03-24T15:30:00+00:00"
+        result = _format_ts(iso, "12h")
+        assert re.search(r"\b(AM|PM)\b", result)
+
+    def test_format_ts_24h_no_am_pm(self):
+        iso = "2026-03-24T15:30:00+00:00"
+        result = _format_ts(iso, "24h")
+        assert not re.search(r"\b(AM|PM)\b", result)
+
+    def test_start_respects_24h_format(self, tmp_db, monkeypatch):
+        monkeypatch.setenv("TIME_FORMAT", "24h")
+        result = runner.invoke(app, ["start"])
+        assert result.exit_code == 0
+        assert not re.search(r"\b(AM|PM)\b", result.stdout)
+        assert not self._ISO_PATTERN.search(result.stdout)
+
+    def test_start_respects_12h_format(self, tmp_db, monkeypatch):
+        monkeypatch.setenv("TIME_FORMAT", "12h")
+        result = runner.invoke(app, ["start"])
+        assert result.exit_code == 0
+        assert re.search(r"\b(AM|PM)\b", result.stdout)

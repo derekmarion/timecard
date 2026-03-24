@@ -7,7 +7,7 @@ import pytest
 
 from timecard.config import Settings
 from timecard.db import add_entry, get_connection, get_entries
-from timecard.invoice import _get_period_dates, _render_invoice_html, generate_invoice
+from timecard.invoice import _format_date, _get_period_dates, _render_invoice_html, generate_invoice
 from timecard.models import Entry
 
 
@@ -28,6 +28,20 @@ def settings(tmp_path):
         invoice_output_dir=str(tmp_path / "invoices"),
         payment_instructions="Pay within 30 days.",
     )
+
+
+class TestFormatDate:
+    def test_formats_date_string(self):
+        assert _format_date("2025-01-15") == "Jan 15, 2025"
+
+    def test_formats_single_digit_day(self):
+        assert _format_date("2025-03-04") == "Mar 4, 2025"
+
+    def test_formats_end_of_month(self):
+        assert _format_date("2025-02-28") == "Feb 28, 2025"
+
+    def test_formats_leap_day(self):
+        assert _format_date("2024-02-29") == "Feb 29, 2024"
 
 
 class TestGetPeriodDates:
@@ -110,6 +124,35 @@ class TestRenderInvoiceHtml:
             settings=settings,
         )
         assert "INV-0001" in html
+
+    def test_dates_are_human_readable(self, settings):
+        entries = [
+            Entry(
+                id=1,
+                started_at="2025-01-15T09:00:00",
+                ended_at="2025-01-15T12:00:00",
+                duration_minutes=180,
+                note="Work",
+            )
+        ]
+        html = _render_invoice_html(
+            entries=entries,
+            invoice_number="INV-0001",
+            period_start="2025-01-01",
+            period_end="2025-01-31",
+            total_hours=3.0,
+            total_amount=450.0,
+            hourly_rate=150.0,
+            settings=settings,
+        )
+        # Formatted dates should appear, not raw YYYY-MM-DD
+        assert "Jan 1, 2025" in html
+        assert "Jan 31, 2025" in html
+        assert "Jan 15, 2025" in html
+        # Raw YYYY-MM-DD format should not appear for these dates
+        assert "2025-01-01" not in html
+        assert "2025-01-31" not in html
+        assert "2025-01-15" not in html
 
 
 class TestGenerateInvoice:

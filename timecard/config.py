@@ -35,6 +35,9 @@ class Settings:
                               Set via INVOICE_NUMBER_START for users migrating
                               from a prior invoicing system (e.g. 100 → first
                               invoice is INV-0101).
+        time_format: Clock format for human-readable CLI output. '12h' shows
+                     hours as 1–12 with AM/PM; '24h' (default) shows hours as
+                     0–23. Set via TIME_FORMAT in .env.
     """
 
     hourly_rate: float = 150.0
@@ -47,6 +50,7 @@ class Settings:
     payment_instructions: str = "Please remit payment within 30 days."
     db_path: str = str(DEFAULT_DB_PATH)
     invoice_number_start: int = 0
+    time_format: str = "24h"
 
     def get_db_path(self) -> Path:
         """Return the resolved database path, creating parent directories if needed.
@@ -122,4 +126,5 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
         ),
         db_path=_get("TIMECARD_DB_PATH", str(DEFAULT_DB_PATH)),
         invoice_number_start=int(_get("INVOICE_NUMBER_START", "0")),
+        time_format=_get("TIME_FORMAT", "24h"),
     )

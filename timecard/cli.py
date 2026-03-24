@@ -34,6 +34,27 @@ def _get_conn():
         raise typer.Exit(code=2)
 
 
+def _format_ts(iso_str: str, time_format: str = "24h") -> str:
+    """Format an ISO 8601 UTC timestamp in the system's local timezone."""
+    dt = datetime.fromisoformat(iso_str).astimezone()
+    date_part = f"{dt.strftime('%b')} {dt.day}, {dt.year}"
+    if time_format == "12h":
+        hour_12 = int(dt.strftime("%I"))  # %I is always supported; int() drops leading zero
+        return f"{date_part} {hour_12}:{dt.strftime('%M %p %Z')}"
+    return f"{date_part} {dt.strftime('%H:%M %Z')}"
+
+
+def _get_conn_and_settings():
+    """Get a database connection and settings together (single config parse)."""
+    settings = load_settings()
+    try:
+        conn = get_connection(settings.get_db_path())
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=2)
+    return conn, settings
+
+
 def _output(data: dict, as_json: bool) -> None:
     """Print output as JSON or human-readable text.
 
@@ -55,14 +76,14 @@ def start(
     """Start a timer session."""
     from timecard.timer import start_timer
 
-    conn = _get_conn()
+    conn, settings = _get_conn_and_settings()
     try:
         started_at = start_timer(conn)
     except ValueError as e:
         _output({"error": str(e)}, json_output)
         raise typer.Exit(code=1)
 
-    _output({"status": "started", "started_at": started_at}, json_output)
+    _output({"status": "started", "started_at": started_at if json_output else _format_ts(started_at, settings.time_format)}, json_output)
 
 
 @app.command()
@@ -97,14 +118,14 @@ def pause(
     """Pause the current timer session."""
     from timecard.timer import pause_timer
 
-    conn = _get_conn()
+    conn, settings = _get_conn_and_settings()
     try:
         paused_at = pause_timer(conn)
     except ValueError as e:
         _output({"error": str(e)}, json_output)
         raise typer.Exit(code=1)
 
-    _output({"status": "paused", "paused_at": paused_at}, json_output)
+    _output({"status": "paused", "paused_at": paused_at if json_output else _format_ts(paused_at, settings.time_format)}, json_output)
 
 
 @app.command()
@@ -114,14 +135,14 @@ def resume(
     """Resume a paused timer session."""
     from timecard.timer import resume_timer
 
-    conn = _get_conn()
+    conn, settings = _get_conn_and_settings()
     try:
         resumed_at = resume_timer(conn)
     except ValueError as e:
         _output({"error": str(e)}, json_output)
         raise typer.Exit(code=1)
 
-    _output({"status": "resumed", "resumed_at": resumed_at}, json_output)
+    _output({"status": "resumed", "resumed_at": resumed_at if json_output else _format_ts(resumed_at, settings.time_format)}, json_output)
 
 
 @app.command()
@@ -131,8 +152,10 @@ def status(
     """Show whether a timer is running and for how long."""
     from timecard.timer import get_timer_status
 
-    conn = _get_conn()
+    conn, settings = _get_conn_and_settings()
     result = get_timer_status(conn)
+    if not json_output and result.get("started_at"):
+        result = {**result, "started_at": _format_ts(result["started_at"], settings.time_format)}
     _output(result, json_output)
 
 
@@ -368,6 +391,16 @@ def setup() -> None:
             break
         typer.echo("Invoice number offset must be 0 or greater.")
 
+
+    while True:
+        time_format = typer.prompt(
+            "Time format (12h or 24h)",
+            default=file_vals.get("TIME_FORMAT", "24h"),
+        ).strip().lower()
+        if time_format in ("12h", "24h"):
+            break
+        typer.echo("Time format must be '12h' or '24h'.")
+
     lines = [
         f"CONTRACTOR_NAME={_quote(contractor_name)}",
         f"CONTRACTOR_ADDRESS={_quote(contractor_address)}",
@@ -378,6 +411,7 @@ def setup() -> None:
         f"INVOICE_OUTPUT_DIR={_quote(invoice_output_dir)}",
         f"PAYMENT_INSTRUCTIONS={_quote(payment_instructions)}",
         f"INVOICE_NUMBER_START={invoice_number_start}",
+        f"TIME_FORMAT={time_format}",
     ]
 
     config_path.parent.mkdir(parents=True, exist_ok=True)

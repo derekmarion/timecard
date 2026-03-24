@@ -14,6 +14,7 @@ class TestSettings:
         s = Settings()
         assert s.hourly_rate == 150.0
         assert s.contractor_name == ""
+        assert s.time_format == "24h"
 
     def test_get_db_path(self, tmp_path):
         s = Settings(db_path=str(tmp_path / "data" / "test.db"))
@@ -72,6 +73,27 @@ class TestLoadSettings:
         settings = load_settings(str(env_file))
         assert settings.contractor_name == ""
         monkeypatch.delenv("CONTRACTOR_NAME", raising=False)
+
+    def test_time_format_loaded_from_file(self, tmp_path):
+        env_file = tmp_path / ".env"
+        env_file.write_text("TIME_FORMAT=24h\n")
+        os.environ.pop("TIME_FORMAT", None)
+        settings = load_settings(str(env_file))
+        assert settings.time_format == "24h"
+
+    def test_time_format_env_var_override(self, tmp_path, monkeypatch):
+        env_file = tmp_path / ".env"
+        env_file.write_text("TIME_FORMAT=12h\n")
+        monkeypatch.setenv("TIME_FORMAT", "24h")
+        settings = load_settings(str(env_file))
+        assert settings.time_format == "24h"
+
+    def test_time_format_defaults_to_24h(self, tmp_path):
+        env_file = tmp_path / ".env"
+        env_file.write_text("")
+        os.environ.pop("TIME_FORMAT", None)
+        settings = load_settings(str(env_file))
+        assert settings.time_format == "24h"
 
     def test_xdg_config_home_respected(self, tmp_path, monkeypatch):
         xdg_config = tmp_path / "xdg_config"
