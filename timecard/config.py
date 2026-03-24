@@ -47,6 +47,7 @@ class Settings:
     payment_instructions: str = "Please remit payment within 30 days."
     db_path: str = str(DEFAULT_DB_PATH)
     invoice_number_start: int = 0
+    time_format: str = "24h"
 
     def get_db_path(self) -> Path:
         """Return the resolved database path, creating parent directories if needed.
@@ -122,4 +123,5 @@ def load_settings(env_path: Optional[str] = None) -> Settings:
         ),
         db_path=_get("TIMECARD_DB_PATH", str(DEFAULT_DB_PATH)),
         invoice_number_start=int(_get("INVOICE_NUMBER_START", "0")),
+        time_format=_get("TIME_FORMAT", "24h"),
     )
