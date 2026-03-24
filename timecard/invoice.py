@@ -18,8 +18,9 @@ from timecard.models import Entry, Invoice
 
 
 def _format_date(date_str: str) -> str:
-    """Format a YYYY-MM-DD date string as 'Mar 24, 2026'."""
-    return datetime.strptime(date_str, "%Y-%m-%d").strftime("%b %d, %Y")
+    """Format a YYYY-MM-DD date string as 'Mar 4, 2026' (no leading zero on day)."""
+    dt = datetime.strptime(date_str, "%Y-%m-%d")
+    return f"{dt.strftime('%b')} {dt.day}, {dt.year}"
 
 
 def _get_period_dates(period: str) -> tuple[str, str]:

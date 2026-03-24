@@ -481,7 +481,7 @@ class TestTimestampFormatting:
     def test_format_ts_preserves_time(self):
         iso = "2026-03-24T15:30:00+00:00"
         result = _format_ts(iso, "12h")
-        assert "AM" in result or "PM" in result
+        assert re.search(r"\b(AM|PM)\b", result)
 
     def test_start_text_output_is_formatted(self, tmp_db):
         result = runner.invoke(app, ["start"])
@@ -538,24 +538,22 @@ class TestTimestampFormatting:
     def test_format_ts_12h_contains_am_pm(self):
         iso = "2026-03-24T15:30:00+00:00"
         result = _format_ts(iso, "12h")
-        assert "AM" in result or "PM" in result
+        assert re.search(r"\b(AM|PM)\b", result)
 
     def test_format_ts_24h_no_am_pm(self):
         iso = "2026-03-24T15:30:00+00:00"
         result = _format_ts(iso, "24h")
-        assert "AM" not in result
-        assert "PM" not in result
+        assert not re.search(r"\b(AM|PM)\b", result)
 
     def test_start_respects_24h_format(self, tmp_db, monkeypatch):
         monkeypatch.setenv("TIME_FORMAT", "24h")
         result = runner.invoke(app, ["start"])
         assert result.exit_code == 0
-        assert "AM" not in result.stdout
-        assert "PM" not in result.stdout
+        assert not re.search(r"\b(AM|PM)\b", result.stdout)
         assert not self._ISO_PATTERN.search(result.stdout)
 
     def test_start_respects_12h_format(self, tmp_db, monkeypatch):
         monkeypatch.setenv("TIME_FORMAT", "12h")
         result = runner.invoke(app, ["start"])
         assert result.exit_code == 0
-        assert "AM" in result.stdout or "PM" in result.stdout
+        assert re.search(r"\b(AM|PM)\b", result.stdout)

@@ -34,6 +34,9 @@ class TestFormatDate:
     def test_formats_date_string(self):
         assert _format_date("2025-01-15") == "Jan 15, 2025"
 
+    def test_formats_single_digit_day(self):
+        assert _format_date("2025-03-04") == "Mar 4, 2025"
+
     def test_formats_end_of_month(self):
         assert _format_date("2025-02-28") == "Feb 28, 2025"
 
@@ -143,7 +146,7 @@ class TestRenderInvoiceHtml:
             settings=settings,
         )
         # Formatted dates should appear, not raw YYYY-MM-DD
-        assert "Jan 01, 2025" in html
+        assert "Jan 1, 2025" in html
         assert "Jan 31, 2025" in html
         assert "Jan 15, 2025" in html
         # Raw YYYY-MM-DD format should not appear for these dates

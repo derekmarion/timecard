@@ -35,6 +35,9 @@ class Settings:
                               Set via INVOICE_NUMBER_START for users migrating
                               from a prior invoicing system (e.g. 100 → first
                               invoice is INV-0101).
+        time_format: Clock format for human-readable CLI output. '12h' shows
+                     hours as 1–12 with AM/PM; '24h' (default) shows hours as
+                     0–23. Set via TIME_FORMAT in .env.
     """
 
     hourly_rate: float = 150.0

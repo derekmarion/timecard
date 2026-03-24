@@ -37,8 +37,22 @@ def _get_conn():
 def _format_ts(iso_str: str, time_format: str = "24h") -> str:
     """Format an ISO 8601 UTC timestamp in the system's local timezone."""
     dt = datetime.fromisoformat(iso_str).astimezone()
-    fmt = "%b %d, %Y %-I:%M %p %Z" if time_format == "12h" else "%b %d, %Y %H:%M %Z"
-    return dt.strftime(fmt)
+    date_part = f"{dt.strftime('%b')} {dt.day}, {dt.year}"
+    if time_format == "12h":
+        hour_12 = int(dt.strftime("%I"))  # %I is always supported; int() drops leading zero
+        return f"{date_part} {hour_12}:{dt.strftime('%M %p %Z')}"
+    return f"{date_part} {dt.strftime('%H:%M %Z')}"
+
+
+def _get_conn_and_settings():
+    """Get a database connection and settings together (single config parse)."""
+    settings = load_settings()
+    try:
+        conn = get_connection(settings.get_db_path())
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=2)
+    return conn, settings
 
 
 def _output(data: dict, as_json: bool) -> None:
@@ -62,8 +76,7 @@ def start(
     """Start a timer session."""
     from timecard.timer import start_timer
 
-    conn = _get_conn()
-    settings = load_settings()
+    conn, settings = _get_conn_and_settings()
     try:
         started_at = start_timer(conn)
     except ValueError as e:
@@ -105,8 +118,7 @@ def pause(
     """Pause the current timer session."""
     from timecard.timer import pause_timer
 
-    conn = _get_conn()
-    settings = load_settings()
+    conn, settings = _get_conn_and_settings()
     try:
         paused_at = pause_timer(conn)
     except ValueError as e:
@@ -123,8 +135,7 @@ def resume(
     """Resume a paused timer session."""
     from timecard.timer import resume_timer
 
-    conn = _get_conn()
-    settings = load_settings()
+    conn, settings = _get_conn_and_settings()
     try:
         resumed_at = resume_timer(conn)
     except ValueError as e:
@@ -141,8 +152,7 @@ def status(
     """Show whether a timer is running and for how long."""
     from timecard.timer import get_timer_status
 
-    conn = _get_conn()
-    settings = load_settings()
+    conn, settings = _get_conn_and_settings()
     result = get_timer_status(conn)
     if not json_output and result.get("started_at"):
         result = {**result, "started_at": _format_ts(result["started_at"], settings.time_format)}
