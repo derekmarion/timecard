@@ -326,8 +326,7 @@ def invoice_generate(
     """Generate a PDF invoice for uninvoiced entries."""
     from timecard.invoice import generate_invoice
 
-    conn = _get_conn()
-    settings = load_settings()
+    conn, settings = _get_conn_and_settings()
 
     try:
         inv = generate_invoice(
@@ -360,7 +359,7 @@ def invoice_list(
     """List past invoices."""
     from timecard.db import get_invoices
 
-    conn, settings = _get_conn_and_settings()
+    conn = _get_conn()
     invoices = get_invoices(conn, paid=paid)
 
     if json_output:
