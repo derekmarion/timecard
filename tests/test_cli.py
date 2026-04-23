@@ -301,6 +301,47 @@ class TestInvoice:
         data = json.loads(result.stdout)
         assert "error" in data
 
+    @patch("timecard.invoice._write_pdf")
+    def test_invoice_paid_custom_date(self, mock_pdf, tmp_db):
+        runner.invoke(app, ["add", "--date", "2025-01-15", "--hours", "3", "--note", "Work"])
+        runner.invoke(app, ["invoice", "generate", "--json"])
+        result = runner.invoke(app, ["invoice", "paid", "INV-0001", "--date", "2025-03-01", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["paid_at"].startswith("2025-03-01")
+
+    def test_invoice_paid_invalid_date(self, tmp_db):
+        result = runner.invoke(app, ["invoice", "paid", "INV-0001", "--date", "not-a-date", "--json"])
+        assert result.exit_code == 1
+        data = json.loads(result.stdout)
+        assert "error" in data
+
+    @patch("timecard.invoice._write_pdf")
+    def test_invoice_unpaid_success(self, mock_pdf, tmp_db):
+        runner.invoke(app, ["add", "--date", "2025-01-15", "--hours", "3", "--note", "Work"])
+        runner.invoke(app, ["invoice", "generate", "--json"])
+        runner.invoke(app, ["invoice", "paid", "INV-0001"])
+        result = runner.invoke(app, ["invoice", "unpaid", "INV-0001", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["status"] == "unpaid"
+        assert data["invoice_number"] == "INV-0001"
+
+    def test_invoice_unpaid_not_found(self, tmp_db):
+        result = runner.invoke(app, ["invoice", "unpaid", "INV-9999", "--json"])
+        assert result.exit_code == 1
+        data = json.loads(result.stdout)
+        assert "error" in data
+
+    @patch("timecard.invoice._write_pdf")
+    def test_invoice_generate_includes_paid_at(self, mock_pdf, tmp_db):
+        runner.invoke(app, ["add", "--date", "2025-01-15", "--hours", "3", "--note", "Work"])
+        result = runner.invoke(app, ["invoice", "generate", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert "paid_at" in data
+        assert data["paid_at"] is None
+
 
 class TestSetup:
     def test_setup_creates_config(self, tmp_path, monkeypatch):

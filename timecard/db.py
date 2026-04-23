@@ -335,12 +335,15 @@ def get_invoices(
 def mark_invoice_paid(
     conn: sqlite3.Connection,
     invoice_number: str,
+    paid_at: Optional[str] = None,
 ) -> Optional[Invoice]:
-    """Mark an invoice as paid, recording the current UTC timestamp.
+    """Mark an invoice as paid.
 
     Args:
         conn: An open SQLite connection.
         invoice_number: The invoice number string (e.g. "INV-0042").
+        paid_at: ISO 8601 timestamp to record as the payment date.
+                 Defaults to the current UTC time if not provided.
 
     Returns:
         The updated Invoice if found, else None.
@@ -350,7 +353,8 @@ def mark_invoice_paid(
     ).fetchone()
     if row is None:
         return None
-    paid_at = datetime.now(timezone.utc).isoformat()
+    if paid_at is None:
+        paid_at = datetime.now(timezone.utc).isoformat()
     conn.execute(
         "UPDATE invoices SET paid_at = ? WHERE invoice_number = ?",
         (paid_at, invoice_number),
@@ -360,6 +364,27 @@ def mark_invoice_paid(
         "SELECT * FROM invoices WHERE invoice_number = ?", (invoice_number,)
     ).fetchone()
     return _row_to_invoice(updated)
+
+
+def mark_invoice_unpaid(
+    conn: sqlite3.Connection,
+    invoice_number: str,
+) -> bool:
+    """Clear the paid status of an invoice.
+
+    Args:
+        conn: An open SQLite connection.
+        invoice_number: The invoice number string (e.g. "INV-0042").
+
+    Returns:
+        True if the invoice was found and updated, False if not found.
+    """
+    cur = conn.execute(
+        "UPDATE invoices SET paid_at = NULL WHERE invoice_number = ?",
+        (invoice_number,),
+    )
+    conn.commit()
+    return cur.rowcount > 0
 
 
 # --- Active Session CRUD ---

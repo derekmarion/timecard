@@ -14,6 +14,7 @@ from timecard.db import (
     get_next_invoice_number,
     mark_entries_invoiced,
     mark_invoice_paid,
+    mark_invoice_unpaid,
     start_session,
     stop_session,
     update_entry,
@@ -214,6 +215,25 @@ class TestInvoiceLifecycle:
         add_invoice(conn, _make_invoice(1))
         result = mark_invoice_paid(conn, "INV-0001")
         datetime.fromisoformat(result.paid_at)  # raises if invalid
+
+    def test_mark_invoice_paid_custom_date(self, conn):
+        add_invoice(conn, _make_invoice(1))
+        result = mark_invoice_paid(conn, "INV-0001", paid_at="2025-03-01T00:00:00+00:00")
+        assert result.paid_at == "2025-03-01T00:00:00+00:00"
+
+    def test_mark_invoice_unpaid_success(self, conn):
+        add_invoice(conn, _make_invoice(1))
+        mark_invoice_paid(conn, "INV-0001")
+        assert mark_invoice_unpaid(conn, "INV-0001") is True
+        invoices = get_invoices(conn, paid=False)
+        assert len(invoices) == 1
+
+    def test_mark_invoice_unpaid_not_found(self, conn):
+        assert mark_invoice_unpaid(conn, "INV-9999") is False
+
+    def test_mark_invoice_unpaid_already_unpaid(self, conn):
+        add_invoice(conn, _make_invoice(1))
+        assert mark_invoice_unpaid(conn, "INV-0001") is True
 
 
 class TestActiveSession:

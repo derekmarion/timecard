@@ -268,11 +268,12 @@ def list_invoices(paid: Optional[bool] = None) -> list[dict]:
 
 
 @mcp.tool()
-def mark_paid(invoice_number: str) -> dict:
+def mark_paid(invoice_number: str, paid_at: Optional[str] = None) -> dict:
     """Mark an invoice as paid.
 
     Args:
         invoice_number: The invoice number string (e.g. "INV-0042").
+        paid_at: ISO 8601 timestamp for the payment date. Defaults to now.
 
     Returns:
         Dict with status, invoice_number, and paid_at on success.
@@ -281,7 +282,7 @@ def mark_paid(invoice_number: str) -> dict:
     from timecard.db import mark_invoice_paid
 
     conn = _get_conn()
-    result = mark_invoice_paid(conn, invoice_number)
+    result = mark_invoice_paid(conn, invoice_number, paid_at=paid_at)
     if result is None:
         return {"error": f"Invoice {invoice_number} not found."}
     return {
@@ -289,6 +290,26 @@ def mark_paid(invoice_number: str) -> dict:
         "invoice_number": result.invoice_number,
         "paid_at": result.paid_at,
     }
+
+
+@mcp.tool()
+def mark_unpaid(invoice_number: str) -> dict:
+    """Clear the paid status of an invoice.
+
+    Args:
+        invoice_number: The invoice number string (e.g. "INV-0042").
+
+    Returns:
+        Dict with status and invoice_number on success.
+        Dict with 'error' key if invoice not found.
+    """
+    from timecard.db import mark_invoice_unpaid
+
+    conn = _get_conn()
+    found = mark_invoice_unpaid(conn, invoice_number)
+    if not found:
+        return {"error": f"Invoice {invoice_number} not found."}
+    return {"status": "unpaid", "invoice_number": invoice_number}
 
 
 def run_server() -> None:

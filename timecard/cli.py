@@ -330,6 +330,7 @@ def invoice_generate(
             "total_hours": inv.total_hours,
             "total_amount": inv.total_amount,
             "pdf_path": inv.pdf_path,
+            "paid_at": inv.paid_at,
         },
         json_output,
     )
@@ -388,13 +389,26 @@ def invoice_list(
 @invoice_app.command("paid")
 def invoice_paid(
     invoice_number: str = typer.Argument(help="Invoice number (e.g. INV-0042)"),
+    date: Optional[str] = typer.Option(
+        None, "--date", help="Payment date (YYYY-MM-DD). Defaults to today."
+    ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Mark an invoice as paid."""
     from timecard.db import mark_invoice_paid
 
+    paid_at = None
+    if date is not None:
+        try:
+            paid_at = datetime.fromisoformat(date).replace(
+                tzinfo=timezone.utc
+            ).isoformat()
+        except ValueError:
+            _output({"error": f"Invalid date format: {date!r}. Use YYYY-MM-DD."}, json_output)
+            raise typer.Exit(code=1)
+
     conn, settings = _get_conn_and_settings()
-    result = mark_invoice_paid(conn, invoice_number)
+    result = mark_invoice_paid(conn, invoice_number, paid_at=paid_at)
     if result is None:
         _output({"error": f"Invoice {invoice_number} not found."}, json_output)
         raise typer.Exit(code=1)
@@ -409,6 +423,23 @@ def invoice_paid(
         },
         json_output,
     )
+
+
+@invoice_app.command("unpaid")
+def invoice_unpaid(
+    invoice_number: str = typer.Argument(help="Invoice number (e.g. INV-0042)"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Mark an invoice as unpaid."""
+    from timecard.db import mark_invoice_unpaid
+
+    conn = _get_conn()
+    found = mark_invoice_unpaid(conn, invoice_number)
+    if not found:
+        _output({"error": f"Invoice {invoice_number} not found."}, json_output)
+        raise typer.Exit(code=1)
+
+    _output({"status": "unpaid", "invoice_number": invoice_number}, json_output)
 
 
 def _quote(value: str) -> str:
