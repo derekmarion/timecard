@@ -392,9 +392,11 @@ def invoice_list(
     typer.echo("-" * 76)
     for inv in invoices:
         period_str = f"{inv.period_start} – {inv.period_end}"
-        paid_str = (
-            _format_ts(inv.paid_at, settings.time_format) if inv.paid_at else "—"
-        )
+        if inv.paid_at:
+            from timecard.invoice import _format_date
+            paid_str = _format_date(inv.paid_at[:10])
+        else:
+            paid_str = "—"
         amount_str = f"${inv.total_amount:.2f}"
         typer.echo(
             f"{inv.id:<6}{inv.invoice_number:<12}{period_str:<30}{inv.total_hours:<8.2f}{amount_str:<12}{paid_str}"
