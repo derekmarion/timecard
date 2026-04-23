@@ -260,6 +260,7 @@ class TestInvoice:
         assert result.exit_code == 0
         data = json.loads(result.stdout)
         assert len(data) == 1
+        assert data[0]["id"] == 1
         assert data[0]["invoice_number"] == "INV-0001"
         assert data[0]["total_hours"] == 3.0
         assert data[0]["paid_at"] is None

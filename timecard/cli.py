@@ -368,6 +368,7 @@ def invoice_list(
             json.dumps(
                 [
                     {
+                        "id": inv.id,
                         "invoice_number": inv.invoice_number,
                         "period_start": inv.period_start,
                         "period_end": inv.period_end,
@@ -387,8 +388,8 @@ def invoice_list(
         typer.echo("No invoices found.")
         return
 
-    typer.echo(f"{'NUMBER':<12}{'PERIOD':<30}{'HOURS':<8}{'AMOUNT':<12}{'PAID'}")
-    typer.echo("-" * 70)
+    typer.echo(f"{'ID':<6}{'NUMBER':<12}{'PERIOD':<30}{'HOURS':<8}{'AMOUNT':<12}{'PAID'}")
+    typer.echo("-" * 76)
     for inv in invoices:
         period_str = f"{inv.period_start} – {inv.period_end}"
         paid_str = (
@@ -396,7 +397,7 @@ def invoice_list(
         )
         amount_str = f"${inv.total_amount:.2f}"
         typer.echo(
-            f"{inv.invoice_number:<12}{period_str:<30}{inv.total_hours:<8.2f}{amount_str:<12}{paid_str}"
+            f"{inv.id:<6}{inv.invoice_number:<12}{period_str:<30}{inv.total_hours:<8.2f}{amount_str:<12}{paid_str}"
         )
 
 
