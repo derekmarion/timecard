@@ -297,6 +297,20 @@ invoice_app = typer.Typer(help="Invoice commands: generate, list, and mark as pa
 app.add_typer(invoice_app, name="invoice")
 
 
+def _resolve_invoice_number(conn, value: str) -> Optional[str]:
+    """Return the invoice_number for a given argument.
+
+    Accepts either a bare integer ID (e.g. "1") or a full invoice number
+    string (e.g. "INV-0042"). Returns None if the invoice is not found.
+    """
+    if value.isdigit():
+        row = conn.execute(
+            "SELECT invoice_number FROM invoices WHERE id = ?", (int(value),)
+        ).fetchone()
+        return row["invoice_number"] if row else None
+    return value
+
+
 @invoice_app.command("generate")
 def invoice_generate(
     period: Optional[str] = typer.Option(
@@ -388,7 +402,7 @@ def invoice_list(
 
 @invoice_app.command("paid")
 def invoice_paid(
-    invoice_number: str = typer.Argument(help="Invoice number (e.g. INV-0042)"),
+    invoice_ref: str = typer.Argument(help="Invoice number or ID (e.g. INV-0042 or 42)"),
     date: Optional[str] = typer.Option(
         None, "--date", help="Payment date (YYYY-MM-DD). Defaults to today."
     ),
@@ -408,6 +422,11 @@ def invoice_paid(
             raise typer.Exit(code=1)
 
     conn, settings = _get_conn_and_settings()
+    invoice_number = _resolve_invoice_number(conn, invoice_ref)
+    if invoice_number is None:
+        _output({"error": f"Invoice {invoice_ref!r} not found."}, json_output)
+        raise typer.Exit(code=1)
+
     result = mark_invoice_paid(conn, invoice_number, paid_at=paid_at)
     if result is None:
         _output({"error": f"Invoice {invoice_number} not found."}, json_output)
@@ -427,13 +446,18 @@ def invoice_paid(
 
 @invoice_app.command("unpaid")
 def invoice_unpaid(
-    invoice_number: str = typer.Argument(help="Invoice number (e.g. INV-0042)"),
+    invoice_ref: str = typer.Argument(help="Invoice number or ID (e.g. INV-0042 or 42)"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Mark an invoice as unpaid."""
     from timecard.db import mark_invoice_unpaid
 
-    conn = _get_conn()
+    conn, _ = _get_conn_and_settings()
+    invoice_number = _resolve_invoice_number(conn, invoice_ref)
+    if invoice_number is None:
+        _output({"error": f"Invoice {invoice_ref!r} not found."}, json_output)
+        raise typer.Exit(code=1)
+
     found = mark_invoice_unpaid(conn, invoice_number)
     if not found:
         _output({"error": f"Invoice {invoice_number} not found."}, json_output)
