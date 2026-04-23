@@ -10,8 +10,11 @@ from timecard.db import (
     get_connection,
     get_entries,
     get_entry,
+    get_invoices,
     get_next_invoice_number,
     mark_entries_invoiced,
+    mark_invoice_paid,
+    mark_invoice_unpaid,
     start_session,
     stop_session,
     update_entry,
@@ -147,6 +150,90 @@ class TestInvoice:
             ),
         )
         assert get_next_invoice_number(conn) == "INV-0002"
+
+
+def _make_invoice(n: int) -> Invoice:
+    return Invoice(
+        invoice_number=f"INV-{n:04d}",
+        period_start="2025-01-01",
+        period_end="2025-01-15",
+        total_hours=1.0,
+        total_amount=150.0,
+        created_at=f"2025-01-{n:02d}T00:00:00",
+    )
+
+
+class TestInvoiceLifecycle:
+    def test_paid_at_column_exists(self, conn):
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(invoices)").fetchall()}
+        assert "paid_at" in cols
+
+    def test_get_invoices_empty(self, conn):
+        assert get_invoices(conn) == []
+
+    def test_get_invoices_all(self, conn):
+        add_invoice(conn, _make_invoice(1))
+        add_invoice(conn, _make_invoice(2))
+        assert len(get_invoices(conn)) == 2
+
+    def test_get_invoices_paid_filter(self, conn):
+        add_invoice(conn, _make_invoice(1))
+        add_invoice(conn, _make_invoice(2))
+        mark_invoice_paid(conn, "INV-0001")
+        paid = get_invoices(conn, paid=True)
+        assert len(paid) == 1
+        assert paid[0].invoice_number == "INV-0001"
+
+    def test_get_invoices_unpaid_filter(self, conn):
+        add_invoice(conn, _make_invoice(1))
+        add_invoice(conn, _make_invoice(2))
+        mark_invoice_paid(conn, "INV-0001")
+        unpaid = get_invoices(conn, paid=False)
+        assert len(unpaid) == 1
+        assert unpaid[0].invoice_number == "INV-0002"
+
+    def test_mark_invoice_paid_success(self, conn):
+        add_invoice(conn, _make_invoice(1))
+        result = mark_invoice_paid(conn, "INV-0001")
+        assert result is not None
+        assert result.invoice_number == "INV-0001"
+        assert result.paid_at is not None
+
+    def test_mark_invoice_paid_not_found(self, conn):
+        assert mark_invoice_paid(conn, "INV-9999") is None
+
+    def test_mark_invoice_paid_idempotent(self, conn):
+        add_invoice(conn, _make_invoice(1))
+        first = mark_invoice_paid(conn, "INV-0001")
+        second = mark_invoice_paid(conn, "INV-0001")
+        assert second is not None
+        assert second.paid_at is not None
+
+    def test_paid_at_is_iso8601(self, conn):
+        from datetime import datetime
+
+        add_invoice(conn, _make_invoice(1))
+        result = mark_invoice_paid(conn, "INV-0001")
+        datetime.fromisoformat(result.paid_at)  # raises if invalid
+
+    def test_mark_invoice_paid_custom_date(self, conn):
+        add_invoice(conn, _make_invoice(1))
+        result = mark_invoice_paid(conn, "INV-0001", paid_at="2025-03-01T00:00:00+00:00")
+        assert result.paid_at == "2025-03-01T00:00:00+00:00"
+
+    def test_mark_invoice_unpaid_success(self, conn):
+        add_invoice(conn, _make_invoice(1))
+        mark_invoice_paid(conn, "INV-0001")
+        assert mark_invoice_unpaid(conn, "INV-0001") is True
+        invoices = get_invoices(conn, paid=False)
+        assert len(invoices) == 1
+
+    def test_mark_invoice_unpaid_not_found(self, conn):
+        assert mark_invoice_unpaid(conn, "INV-9999") is False
+
+    def test_mark_invoice_unpaid_already_unpaid(self, conn):
+        add_invoice(conn, _make_invoice(1))
+        assert mark_invoice_unpaid(conn, "INV-0001") is True
 
 
 class TestActiveSession:

@@ -36,7 +36,11 @@ This starts a stdio-based MCP server. Configure it in your agent client (e.g., C
 | `get_log` | `period?: str` | Return entries as a list (optional period filter) |
 | `edit_entry` | `id: int`, `hours?: float`, `note?: str` | Update an existing entry |
 | `delete_entry_tool` | `id: int` | Delete an entry |
-| `generate_invoice` | `period?: str`, `note?: str` | Generate a PDF invoice |
+| `export_csv` | `period?: str` | Export entries as a CSV string |
+| `generate_invoice` | `period?: str`, `note?: str`, `number?: int` | Generate a PDF invoice |
+| `list_invoices` | `paid?: bool` | List invoices; `True` = paid only, `False` = unpaid only, omit for all |
+| `mark_paid` | `invoice_number: str`, `paid_at?: str` | Mark an invoice as paid (ISO 8601 timestamp; defaults to now) |
+| `mark_unpaid` | `invoice_number: str` | Clear the paid status of an invoice |
 
 ## Example Agent Interaction
 

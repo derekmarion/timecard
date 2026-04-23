@@ -293,8 +293,26 @@ def export(
         typer.echo(csv_text, nl=False)
 
 
-@app.command()
-def invoice(
+invoice_app = typer.Typer(help="Invoice commands: generate, list, and mark as paid.")
+app.add_typer(invoice_app, name="invoice")
+
+
+def _resolve_invoice_number(conn, value: str) -> Optional[str]:
+    """Return the invoice_number for a given argument.
+
+    Accepts either a bare integer ID (e.g. "1") or a full invoice number
+    string (e.g. "INV-0042"). Returns None if the invoice is not found.
+    """
+    if value.isdigit():
+        row = conn.execute(
+            "SELECT invoice_number FROM invoices WHERE id = ?", (int(value),)
+        ).fetchone()
+        return row["invoice_number"] if row else None
+    return value
+
+
+@invoice_app.command("generate")
+def invoice_generate(
     period: Optional[str] = typer.Option(
         None, help="Billing period: week, biweekly, or month"
     ),
@@ -308,8 +326,7 @@ def invoice(
     """Generate a PDF invoice for uninvoiced entries."""
     from timecard.invoice import generate_invoice
 
-    conn = _get_conn()
-    settings = load_settings()
+    conn, settings = _get_conn_and_settings()
 
     try:
         inv = generate_invoice(
@@ -326,9 +343,129 @@ def invoice(
             "total_hours": inv.total_hours,
             "total_amount": inv.total_amount,
             "pdf_path": inv.pdf_path,
+            "paid_at": inv.paid_at,
         },
         json_output,
     )
+
+
+@invoice_app.command("list")
+def invoice_list(
+    paid: Optional[bool] = typer.Option(
+        None, "--paid/--unpaid", help="Filter by payment status"
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """List past invoices."""
+    from timecard.db import get_invoices
+
+    conn = _get_conn()
+    invoices = get_invoices(conn, paid=paid)
+
+    if json_output:
+        typer.echo(
+            json.dumps(
+                [
+                    {
+                        "id": inv.id,
+                        "invoice_number": inv.invoice_number,
+                        "period_start": inv.period_start,
+                        "period_end": inv.period_end,
+                        "total_hours": inv.total_hours,
+                        "total_amount": inv.total_amount,
+                        "pdf_path": inv.pdf_path,
+                        "paid_at": inv.paid_at,
+                    }
+                    for inv in invoices
+                ],
+                indent=2,
+            )
+        )
+        return
+
+    if not invoices:
+        typer.echo("No invoices found.")
+        return
+
+    typer.echo(f"{'ID':<6}{'NUMBER':<12}{'PERIOD':<30}{'HOURS':<8}{'AMOUNT':<12}{'PAID AT'}")
+    typer.echo("-" * 76)
+    for inv in invoices:
+        period_str = f"{inv.period_start} – {inv.period_end}"
+        if inv.paid_at:
+            from timecard.invoice import _format_date
+            paid_str = _format_date(inv.paid_at[:10])
+        else:
+            paid_str = "—"
+        amount_str = f"${inv.total_amount:.2f}"
+        typer.echo(
+            f"{inv.id:<6}{inv.invoice_number:<12}{period_str:<30}{inv.total_hours:<8.2f}{amount_str:<12}{paid_str}"
+        )
+
+
+@invoice_app.command("paid")
+def invoice_paid(
+    invoice_ref: str = typer.Argument(help="Invoice number or ID (e.g. INV-0042 or 42)"),
+    date: Optional[str] = typer.Option(
+        None, "--date", help="Payment date (YYYY-MM-DD). Defaults to today."
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Mark an invoice as paid."""
+    from timecard.db import mark_invoice_paid
+
+    paid_at = None
+    if date is not None:
+        try:
+            paid_at = datetime.fromisoformat(date).replace(
+                tzinfo=timezone.utc
+            ).isoformat()
+        except ValueError:
+            _output({"error": f"Invalid date format: {date!r}. Use YYYY-MM-DD."}, json_output)
+            raise typer.Exit(code=1)
+
+    conn, settings = _get_conn_and_settings()
+    invoice_number = _resolve_invoice_number(conn, invoice_ref)
+    if invoice_number is None:
+        _output({"error": f"Invoice {invoice_ref!r} not found."}, json_output)
+        raise typer.Exit(code=1)
+
+    result = mark_invoice_paid(conn, invoice_number, paid_at=paid_at)
+    if result is None:
+        _output({"error": f"Invoice {invoice_number} not found."}, json_output)
+        raise typer.Exit(code=1)
+
+    _output(
+        {
+            "status": "paid",
+            "invoice_number": result.invoice_number,
+            "paid_at": result.paid_at
+            if json_output
+            else _format_ts(result.paid_at, settings.time_format),
+        },
+        json_output,
+    )
+
+
+@invoice_app.command("unpaid")
+def invoice_unpaid(
+    invoice_ref: str = typer.Argument(help="Invoice number or ID (e.g. INV-0042 or 42)"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Mark an invoice as unpaid."""
+    from timecard.db import mark_invoice_unpaid
+
+    conn, _ = _get_conn_and_settings()
+    invoice_number = _resolve_invoice_number(conn, invoice_ref)
+    if invoice_number is None:
+        _output({"error": f"Invoice {invoice_ref!r} not found."}, json_output)
+        raise typer.Exit(code=1)
+
+    found = mark_invoice_unpaid(conn, invoice_number)
+    if not found:
+        _output({"error": f"Invoice {invoice_number} not found."}, json_output)
+        raise typer.Exit(code=1)
+
+    _output({"status": "unpaid", "invoice_number": invoice_number}, json_output)
 
 
 def _quote(value: str) -> str:
