@@ -237,6 +237,60 @@ def generate_invoice(
     }
 
 
+@mcp.tool()
+def list_invoices(paid: Optional[bool] = None) -> list[dict]:
+    """List past invoices, optionally filtered by payment status.
+
+    Args:
+        paid: If True, return only paid invoices. If False, return only unpaid.
+              If None (default), return all invoices.
+
+    Returns:
+        List of invoice dicts with invoice_number, period_start, period_end,
+        total_hours, total_amount, pdf_path, and paid_at fields.
+    """
+    from timecard.db import get_invoices
+
+    conn = _get_conn()
+    invoices = get_invoices(conn, paid=paid)
+    return [
+        {
+            "invoice_number": inv.invoice_number,
+            "period_start": inv.period_start,
+            "period_end": inv.period_end,
+            "total_hours": inv.total_hours,
+            "total_amount": inv.total_amount,
+            "pdf_path": inv.pdf_path,
+            "paid_at": inv.paid_at,
+        }
+        for inv in invoices
+    ]
+
+
+@mcp.tool()
+def mark_paid(invoice_number: str) -> dict:
+    """Mark an invoice as paid.
+
+    Args:
+        invoice_number: The invoice number string (e.g. "INV-0042").
+
+    Returns:
+        Dict with status, invoice_number, and paid_at on success.
+        Dict with 'error' key if invoice not found.
+    """
+    from timecard.db import mark_invoice_paid
+
+    conn = _get_conn()
+    result = mark_invoice_paid(conn, invoice_number)
+    if result is None:
+        return {"error": f"Invoice {invoice_number} not found."}
+    return {
+        "status": "paid",
+        "invoice_number": result.invoice_number,
+        "paid_at": result.paid_at,
+    }
+
+
 def run_server() -> None:
     """Start the MCP server on stdio transport."""
     mcp.run(transport="stdio")

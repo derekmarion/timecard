@@ -227,7 +227,7 @@ class TestInvoice:
     @patch("timecard.invoice._write_pdf")
     def test_generate_invoice(self, mock_pdf, tmp_db):
         runner.invoke(app, ["add", "--date", "2025-01-15", "--hours", "3", "--note", "Work"])
-        result = runner.invoke(app, ["invoice", "--json"])
+        result = runner.invoke(app, ["invoice", "generate", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.stdout)
         assert data["status"] == "generated"
@@ -236,16 +236,70 @@ class TestInvoice:
 
     @patch("timecard.invoice._write_pdf")
     def test_invoice_no_entries_errors(self, mock_pdf, tmp_db):
-        result = runner.invoke(app, ["invoice", "--json"])
+        result = runner.invoke(app, ["invoice", "generate", "--json"])
         assert result.exit_code == 1
 
     @patch("timecard.invoice._write_pdf")
     def test_invoice_number_override(self, mock_pdf, tmp_db):
         runner.invoke(app, ["add", "--date", "2025-01-15", "--hours", "2", "--note", "Work"])
-        result = runner.invoke(app, ["invoice", "--number", "42", "--json"])
+        result = runner.invoke(app, ["invoice", "generate", "--number", "42", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.stdout)
         assert data["invoice_number"] == "INV-0042"
+
+    def test_invoice_list_empty(self, tmp_db):
+        result = runner.invoke(app, ["invoice", "list"])
+        assert result.exit_code == 0
+        assert "No invoices found." in result.stdout
+
+    @patch("timecard.invoice._write_pdf")
+    def test_invoice_list_all(self, mock_pdf, tmp_db):
+        runner.invoke(app, ["add", "--date", "2025-01-15", "--hours", "3", "--note", "Work"])
+        runner.invoke(app, ["invoice", "generate", "--json"])
+        result = runner.invoke(app, ["invoice", "list", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert len(data) == 1
+        assert data[0]["invoice_number"] == "INV-0001"
+        assert data[0]["total_hours"] == 3.0
+        assert data[0]["paid_at"] is None
+
+    @patch("timecard.invoice._write_pdf")
+    def test_invoice_list_paid_filter(self, mock_pdf, tmp_db):
+        runner.invoke(app, ["add", "--date", "2025-01-15", "--hours", "3", "--note", "Work"])
+        runner.invoke(app, ["invoice", "generate", "--json"])
+        runner.invoke(app, ["add", "--date", "2025-01-16", "--hours", "2", "--note", "More work"])
+        runner.invoke(app, ["invoice", "generate", "--json"])
+        runner.invoke(app, ["invoice", "paid", "INV-0001"])
+
+        paid_result = runner.invoke(app, ["invoice", "list", "--paid", "--json"])
+        assert paid_result.exit_code == 0
+        paid_data = json.loads(paid_result.stdout)
+        assert len(paid_data) == 1
+        assert paid_data[0]["invoice_number"] == "INV-0001"
+
+        unpaid_result = runner.invoke(app, ["invoice", "list", "--unpaid", "--json"])
+        assert unpaid_result.exit_code == 0
+        unpaid_data = json.loads(unpaid_result.stdout)
+        assert len(unpaid_data) == 1
+        assert unpaid_data[0]["invoice_number"] == "INV-0002"
+
+    @patch("timecard.invoice._write_pdf")
+    def test_invoice_paid_success(self, mock_pdf, tmp_db):
+        runner.invoke(app, ["add", "--date", "2025-01-15", "--hours", "3", "--note", "Work"])
+        runner.invoke(app, ["invoice", "generate", "--json"])
+        result = runner.invoke(app, ["invoice", "paid", "INV-0001", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["status"] == "paid"
+        assert data["invoice_number"] == "INV-0001"
+        assert data["paid_at"] is not None
+
+    def test_invoice_paid_not_found(self, tmp_db):
+        result = runner.invoke(app, ["invoice", "paid", "INV-9999", "--json"])
+        assert result.exit_code == 1
+        data = json.loads(result.stdout)
+        assert "error" in data
 
 
 class TestSetup:

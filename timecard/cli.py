@@ -293,8 +293,12 @@ def export(
         typer.echo(csv_text, nl=False)
 
 
-@app.command()
-def invoice(
+invoice_app = typer.Typer(help="Invoice commands: generate, list, and mark as paid.")
+app.add_typer(invoice_app, name="invoice")
+
+
+@invoice_app.command("generate")
+def invoice_generate(
     period: Optional[str] = typer.Option(
         None, help="Billing period: week, biweekly, or month"
     ),
@@ -326,6 +330,82 @@ def invoice(
             "total_hours": inv.total_hours,
             "total_amount": inv.total_amount,
             "pdf_path": inv.pdf_path,
+        },
+        json_output,
+    )
+
+
+@invoice_app.command("list")
+def invoice_list(
+    paid: Optional[bool] = typer.Option(
+        None, "--paid/--unpaid", help="Filter by payment status"
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """List past invoices."""
+    from timecard.db import get_invoices
+
+    conn, settings = _get_conn_and_settings()
+    invoices = get_invoices(conn, paid=paid)
+
+    if json_output:
+        typer.echo(
+            json.dumps(
+                [
+                    {
+                        "invoice_number": inv.invoice_number,
+                        "period_start": inv.period_start,
+                        "period_end": inv.period_end,
+                        "total_hours": inv.total_hours,
+                        "total_amount": inv.total_amount,
+                        "pdf_path": inv.pdf_path,
+                        "paid_at": inv.paid_at,
+                    }
+                    for inv in invoices
+                ],
+                indent=2,
+            )
+        )
+        return
+
+    if not invoices:
+        typer.echo("No invoices found.")
+        return
+
+    typer.echo(f"{'NUMBER':<12}{'PERIOD':<30}{'HOURS':<8}{'AMOUNT':<12}{'PAID'}")
+    typer.echo("-" * 70)
+    for inv in invoices:
+        period_str = f"{inv.period_start} – {inv.period_end}"
+        paid_str = (
+            _format_ts(inv.paid_at, settings.time_format) if inv.paid_at else "No"
+        )
+        amount_str = f"${inv.total_amount:.2f}"
+        typer.echo(
+            f"{inv.invoice_number:<12}{period_str:<30}{inv.total_hours:<8.2f}{amount_str:<12}{paid_str}"
+        )
+
+
+@invoice_app.command("paid")
+def invoice_paid(
+    invoice_number: str = typer.Argument(help="Invoice number (e.g. INV-0042)"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Mark an invoice as paid."""
+    from timecard.db import mark_invoice_paid
+
+    conn, settings = _get_conn_and_settings()
+    result = mark_invoice_paid(conn, invoice_number)
+    if result is None:
+        _output({"error": f"Invoice {invoice_number} not found."}, json_output)
+        raise typer.Exit(code=1)
+
+    _output(
+        {
+            "status": "paid",
+            "invoice_number": result.invoice_number,
+            "paid_at": result.paid_at
+            if json_output
+            else _format_ts(result.paid_at, settings.time_format),
         },
         json_output,
     )

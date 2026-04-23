@@ -1,6 +1,7 @@
 """SQLite database layer for TimeCard — schema initialization and CRUD operations."""
 
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -86,6 +87,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
         if "paused_duration_minutes" not in cols:
             conn.execute("ALTER TABLE active_session ADD COLUMN paused_duration_minutes REAL DEFAULT 0")
         conn.execute("UPDATE _schema_version SET version = 1 WHERE id = 1")
+        conn.commit()
+
+    if version < 2:
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(invoices)").fetchall()}
+        if "paid_at" not in cols:
+            conn.execute("ALTER TABLE invoices ADD COLUMN paid_at TEXT")
+        conn.execute("UPDATE _schema_version SET version = 2 WHERE id = 1")
         conn.commit()
 
 
@@ -300,6 +308,60 @@ def get_next_invoice_number(conn: sqlite3.Connection, start_offset: int = 0) -> 
     return f"INV-{next_num:04d}"
 
 
+def get_invoices(
+    conn: sqlite3.Connection,
+    paid: Optional[bool] = None,
+) -> list[Invoice]:
+    """Fetch invoices with optional paid/unpaid filter.
+
+    Args:
+        conn: An open SQLite connection.
+        paid: If True, return only paid invoices. If False, return only unpaid.
+              If None, return all invoices.
+
+    Returns:
+        List of Invoice objects ordered by created_at.
+    """
+    query = "SELECT * FROM invoices WHERE 1=1"
+    if paid is True:
+        query += " AND paid_at IS NOT NULL"
+    elif paid is False:
+        query += " AND paid_at IS NULL"
+    query += " ORDER BY created_at"
+    rows = conn.execute(query).fetchall()
+    return [_row_to_invoice(r) for r in rows]
+
+
+def mark_invoice_paid(
+    conn: sqlite3.Connection,
+    invoice_number: str,
+) -> Optional[Invoice]:
+    """Mark an invoice as paid, recording the current UTC timestamp.
+
+    Args:
+        conn: An open SQLite connection.
+        invoice_number: The invoice number string (e.g. "INV-0042").
+
+    Returns:
+        The updated Invoice if found, else None.
+    """
+    row = conn.execute(
+        "SELECT * FROM invoices WHERE invoice_number = ?", (invoice_number,)
+    ).fetchone()
+    if row is None:
+        return None
+    paid_at = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        "UPDATE invoices SET paid_at = ? WHERE invoice_number = ?",
+        (paid_at, invoice_number),
+    )
+    conn.commit()
+    updated = conn.execute(
+        "SELECT * FROM invoices WHERE invoice_number = ?", (invoice_number,)
+    ).fetchone()
+    return _row_to_invoice(updated)
+
+
 # --- Active Session CRUD ---
 
 
@@ -427,6 +489,22 @@ def resume_session(conn: sqlite3.Connection, resumed_at: str) -> ActiveSession:
     session.paused_at = None
     session.paused_duration_minutes = new_paused
     return session
+
+
+def _row_to_invoice(row: sqlite3.Row) -> Invoice:
+    """Convert a sqlite3.Row to an Invoice dataclass."""
+    return Invoice(
+        id=row["id"],
+        invoice_number=row["invoice_number"],
+        period_start=row["period_start"],
+        period_end=row["period_end"],
+        total_hours=row["total_hours"],
+        total_amount=row["total_amount"],
+        created_at=row["created_at"],
+        pdf_path=row["pdf_path"],
+        note=row["note"],
+        paid_at=row["paid_at"],
+    )
 
 
 def _row_to_entry(row: sqlite3.Row) -> Entry:

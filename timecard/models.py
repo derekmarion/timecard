@@ -48,6 +48,7 @@ class Invoice:
         created_at: ISO 8601 timestamp when the invoice was created.
         pdf_path: Local filesystem path to the generated PDF.
         note: Optional project/work description.
+        paid_at: ISO 8601 UTC timestamp when marked paid, or None if unpaid.
     """
 
     id: Optional[int] = None
@@ -59,6 +60,7 @@ class Invoice:
     created_at: Optional[str] = None
     pdf_path: Optional[str] = None
     note: Optional[str] = None
+    paid_at: Optional[str] = None
 
 
 @dataclass
