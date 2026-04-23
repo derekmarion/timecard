@@ -388,12 +388,12 @@ def invoice_list(
         typer.echo("No invoices found.")
         return
 
-    typer.echo(f"{'ID':<6}{'NUMBER':<12}{'PERIOD':<30}{'HOURS':<8}{'AMOUNT':<12}{'PAID'}")
+    typer.echo(f"{'ID':<6}{'NUMBER':<12}{'PERIOD':<30}{'HOURS':<8}{'AMOUNT':<12}{'PAID AT'}")
     typer.echo("-" * 76)
     for inv in invoices:
         period_str = f"{inv.period_start} – {inv.period_end}"
         paid_str = (
-            _format_ts(inv.paid_at, settings.time_format) if inv.paid_at else "No"
+            _format_ts(inv.paid_at, settings.time_format) if inv.paid_at else "—"
         )
         amount_str = f"${inv.total_amount:.2f}"
         typer.echo(
