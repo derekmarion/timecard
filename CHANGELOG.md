@@ -13,10 +13,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Config file now defaults to `~/.config/timecard/.env` (XDG Base Directory spec)
 - Database now defaults to `~/.local/share/timecard/timecard.db` (XDG Base Directory spec)
 - `INVOICE_NUMBER_START` config variable — offsets auto-incremented invoice numbers for users migrating from a prior invoicing system (e.g. `INVOICE_NUMBER_START=100` → first invoice is `INV-0101`)
-- `--number` flag on `timecard invoice` — overrides the auto-incremented invoice number for a single invocation; raises an error if the number is already in use
+- `--number` flag on `timecard invoice generate` — overrides the auto-incremented invoice number for a single invocation; raises an error if the number is already in use
+- `timecard invoice list` — shows all past invoices (ID, number, period, hours, amount, paid-at date) with optional `--paid`/`--unpaid` filtering and `--json` support
+- `timecard invoice paid <number|id>` — marks an invoice as paid, recording a UTC timestamp; accepts the invoice's string number (`INV-0001`) or integer ID (`1`); optional `--date YYYY-MM-DD` to record a specific payment date instead of today
+- `timecard invoice unpaid <number|id>` — clears the paid status of an invoice
+- `paid_at` column added to the `invoices` database table (schema migration v2)
+- MCP tools: `list_invoices`, `mark_paid` (with optional `paid_at`), `mark_unpaid`
 
 ### Changed
 - Install scripts now install from the GitHub git URL instead of requiring a local clone
+- `timecard invoice` is now a command group; invoice generation moved to `timecard invoice generate`
 
 ## [1.1.0] - 2026-03-04
 

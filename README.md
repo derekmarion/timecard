@@ -34,8 +34,10 @@ Installs `uv` and prompts you to install the [GTK3 runtime](https://github.com/n
 ### Developer install (from source)
 
 ```bash
-uv tool install .
+uv cache clean && uv tool install --reinstall .
 ```
+
+Re-run the same command to pick up changes. The cache clear ensures uv doesn't serve a stale build.
 
 ## Updating
 
@@ -150,23 +152,52 @@ entry_id: 2
 ### Generate an invoice
 
 ```bash
-$ timecard invoice --note "January backend work"
+$ timecard invoice generate --note "January backend work"
 status: generated
 invoice_number: INV-0001
 total_hours: 3.01
 total_amount: 451.5
 pdf_path: /home/user/invoices/INV-0001.pdf
+paid_at: None
 
-$ timecard invoice --period month --output ./custom-invoice.pdf
+$ timecard invoice generate --period month --output ./custom-invoice.pdf
 
 # Override the invoice number for a single invocation
-$ timecard invoice --number 42
+$ timecard invoice generate --number 42
 invoice_number: INV-0042
 ```
 
 When no `--period` is specified, all uninvoiced entries are included. Period options (`week`, `biweekly`, `month`) use calendar-aligned windows (e.g., last complete Mon–Sun week, last complete calendar month).
 
 To start invoice numbering at a specific offset (e.g. when migrating from a prior system), set `INVOICE_NUMBER_START` in your `.env`. With `INVOICE_NUMBER_START=100`, the first invoice will be `INV-0101`.
+
+### List invoices
+
+```bash
+$ timecard invoice list
+ID    NUMBER      PERIOD                          HOURS   AMOUNT      PAID AT
+----------------------------------------------------------------------------
+1     INV-0001    2025-01-01 – 2025-01-15        3.01    $451.50     —
+2     INV-0002    2025-01-16 – 2025-01-31        8.00    $1200.00    Jan 31, 2025
+
+# Filter to outstanding or settled invoices
+$ timecard invoice list --unpaid
+$ timecard invoice list --paid --json
+```
+
+### Mark an invoice as paid
+
+```bash
+# By invoice number or ID — both work
+$ timecard invoice paid INV-0001
+$ timecard invoice paid 1
+
+# Record a specific payment date
+$ timecard invoice paid INV-0001 --date 2025-02-01
+
+# Undo a payment (e.g. if marked paid by mistake)
+$ timecard invoice unpaid INV-0001
+```
 
 ### JSON output
 
