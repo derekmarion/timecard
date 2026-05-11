@@ -423,7 +423,7 @@ def invoice_paid(
             _output({"error": f"Invalid date format: {date!r}. Use YYYY-MM-DD."}, json_output)
             raise typer.Exit(code=1)
 
-    conn, settings = _get_conn_and_settings()
+    conn, _ = _get_conn_and_settings()
     invoice_number = _resolve_invoice_number(conn, invoice_ref)
     if invoice_number is None:
         _output({"error": f"Invoice {invoice_ref!r} not found."}, json_output)
@@ -434,13 +434,18 @@ def invoice_paid(
         _output({"error": f"Invoice {invoice_number} not found."}, json_output)
         raise typer.Exit(code=1)
 
+    if json_output:
+        paid_at = result.paid_at
+    else:
+        from timecard.invoice import _format_date
+
+        paid_at = _format_date(result.paid_at[:10])
+
     _output(
         {
             "status": "paid",
             "invoice_number": result.invoice_number,
-            "paid_at": result.paid_at
-            if json_output
-            else _format_ts(result.paid_at, settings.time_format),
+            "paid_at": paid_at,
         },
         json_output,
     )

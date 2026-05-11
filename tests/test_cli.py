@@ -311,6 +311,16 @@ class TestInvoice:
         data = json.loads(result.stdout)
         assert data["paid_at"].startswith("2025-03-01")
 
+    @patch("timecard.invoice._write_pdf")
+    def test_invoice_paid_human_output_shows_date_only(self, mock_pdf, tmp_db):
+        runner.invoke(app, ["add", "--date", "2025-01-15", "--hours", "3", "--note", "Work"])
+        runner.invoke(app, ["invoice", "generate", "--json"])
+        result = runner.invoke(app, ["invoice", "paid", "INV-0001", "--date", "2025-03-01"])
+        assert result.exit_code == 0
+        assert "paid_at: Mar 1, 2025" in result.stdout
+        assert "00:00" not in result.stdout
+        assert "UTC" not in result.stdout
+
     def test_invoice_paid_invalid_date(self, tmp_db):
         result = runner.invoke(app, ["invoice", "paid", "INV-0001", "--date", "not-a-date", "--json"])
         assert result.exit_code == 1
